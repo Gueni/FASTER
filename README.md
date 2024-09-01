@@ -1,2 +1,14 @@
-# FASTER
-FASTER (Failure Analysis, Simulation, Testing, and Evaluation Report) automates reliability analysis for LTspice circuits. It performs FMEDA and FTA, simulating faults to assess impacts on circuit performance. The program generates detailed reports with plots of currents and voltages, providing insights to enhance circuit reliability and safety.
+# Tree
+<<<<<<< HEAD
+Programt that can take an LTspice file, analyze the circuit, and perform Failure Modes, Effects, and Diagnostic Analysis (FMEDA) and Fault Tree Analysis (FTA). The program generates at the end a report with all plots of currents and voltages at every component.
+
+## Todo
+    
+    - Montecarlo 
+    - Part stress 
+    - Worst case 
+    - simulate
+    
+=======
+Program that can take an LTspice file, analyze the circuit, and perform Failure Modes, Effects, and Diagnostic Analysis (FMEDA) and Fault Tree Analysis (FTA).
+>>>>>>> 5554aa1573805d6a813456fbc9fced9cc8799541
