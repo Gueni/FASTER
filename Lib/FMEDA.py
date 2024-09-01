@@ -1,12 +1,30 @@
 
-import Failures 
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                          ________  _____________  ___ 
+#?                         / ____/  |/  / ____/ __ \/   |
+#?                        / /_  / /|_/ / __/ / / / / /| |
+#?                       / __/ / /  / / /___/ /_/ / ___ |
+#?                      /_/   /_/  /_/_____/_____/_/  |_|
+#?                      
+#?
+#? Name:        FMEDA.py
+#? Purpose:     Define failure modes for the components.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------  
+#? ------------------------------------------------------------------------------- 
+
+import assets.Failures as Failures 
 
 def analyze_failure_modes(components):
-    """
-    Analyzes the failure modes based on the given components.
-    """
+
     failure_modes       = {}
-    # Define failure modes for the components
     component_failures  = Failures.component_failures
     for comp in components:
         comp_name       = comp['name']
@@ -16,3 +34,4 @@ def analyze_failure_modes(components):
 
     return failure_modes
 
+#? ------------------------------------------------------------------------------- 

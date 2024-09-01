@@ -5,8 +5,4 @@ FASTER (Failure Analysis, Simulation, Testing, and Evaluation Report) automates 
 
 ## Todo
     
-    - Montecarlo 
-    - Part stress 
-    - Worst case 
-    - simulate
     

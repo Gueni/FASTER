@@ -1,9 +1,29 @@
 
-#?---------------------------------------------------------------------------------------------------------------------------
+#!/usr/bin/env python
+# coding=utf-8
+#? -------------------------------------------------------------------------------
+#?
+#?                                   __  __
+#?                      ____  ____ _/ /_/ /____  _________  _____
+#?                     / __ \/ __ `/ __/ __/ _ \/ ___/ __ \/ ___/
+#?                    / /_/ / /_/ / /_/ /_/  __/ /  / / / (__  )
+#?                   / .___/\__,_/\__/\__/\___/_/  /_/ /_/____/
+#?                  /_/
+#?                  
+#? Name:        patterns.py
+#? Purpose:     Define regular expression patterns for various components
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------  
+#? ------------------------------------------------------------------------------- 
+
 import re
-#?---------------------------------------------------------------------------------------------------------------------------
-# Define regular expression patterns for various components
+
 symbol_patterns = [
+
     re.compile(r'SYMBOL voltage (-?\d+) (-?\d+) R0'),               # Voltage Source
     re.compile(r'SYMBOL res (-?\d+) (-?\d+) R90'),                  # Resistor
     re.compile(r'SYMBOL cap (-?\d+) (-?\d+) R0'),                   # Capacitor
@@ -22,9 +42,9 @@ symbol_patterns = [
     re.compile(r'SYMBOL Misc\\cell (-?\d+) (-?\d+) R0'),            # Battery Cell
     re.compile(r'SYMBOL [^\s]+ (-?\d+) (-?\d+) R0')                 # Generic symbol pattern
 ]
-#?---------------------------------------------------------------------------------------------------------------------------
-# Define a dictionary to map keywords to component types
-component_type_map = {
+#? ------------------------------------------------------------------------------- 
+
+component_type_map = {      # Define a dictionary to map keywords to component types
     'voltage'           : 'voltage'             ,
     'res'               : 'resistor'            ,
     'cap'               : 'capacitor'           ,
@@ -40,7 +60,7 @@ component_type_map = {
     'fuse'              : 'fuse'                ,
     'connector'         : 'connector'           ,
     'transformer'       : 'transformer'         ,
-    'U'                 : 'IC'                  ,   # For generic ICs (U1, U2, etc.)
-    'cell'              : 'battery'                 # Battery cell
+    'U'                 : 'IC'                  ,   
+    'cell'              : 'battery'                 
 }
-#?---------------------------------------------------------------------------------------------------------------------------
+#? ------------------------------------------------------------------------------- 

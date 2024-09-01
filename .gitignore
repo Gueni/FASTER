@@ -1,12 +1,6 @@
 
-/d:/4 WORKSPACE/FASTER/FASTER/assets/Test.log
-/d:/4 WORKSPACE/FASTER/FASTER/RES
-*.xlsx
-*.log
-*.pyc
-/d:/4 WORKSPACE/FASTER/FASTER/RES/ltspice_analysis_report.html
-*.html
-*.raw/d:/4 WORKSPACE/FASTER/FASTER/RES/tempo
-/d:/4 WORKSPACE/FASTER/FASTER/RES/tempo/Test_wc.asc
-*.asc
-*.raw
+*pyfig.py
+*/testfiles
+*/__pycache__
+*RES/
+*wexamples/

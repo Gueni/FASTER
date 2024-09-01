@@ -1,5 +1,30 @@
 
-#?---------------------------------------------------------------------------------------------------------------------------
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                                  _______________ 
+#?                                 / ____/_  __/   |
+#?                                / /_    / / / /| |
+#?                               / __/   / / / ___ |
+#?                              /_/     /_/ /_/  |_|
+#?                              
+#?
+#? Name:        main.py
+#? Purpose:     Define the main routine.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------  
+#? ------------------------------------------------------------------------------- 
+
+import sys
+import os
+
+# Add the parent directory (project_root) to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import parse_ltspice_file 
 import FMEDA
 import tkinter as tk
@@ -7,13 +32,11 @@ from tkinter import filedialog
 import pandas as pd
 import time
 from pathlib import Path
-import sys ,os
 import FTA
-import FIT_rates
+from assets import FIT_rates
 import clear
 import genreport
-import WCA
-#?---------------------------------------------------------------------------------------------------------------------------
+
 def select_file():
     root            = tk.Tk()
     root.withdraw()  
@@ -25,7 +48,7 @@ def select_file():
         print("No file selected.")
         sys.exit()
     return file_path
-#?---------------------------------------------------------------------------------------------------------------------------
+
 def main():
     """
     Runs FMEDA analysis based on the LTSpice schematic file and saves results to an Excel file.
@@ -47,7 +70,7 @@ def main():
     
     if not os.path.exists(res_dir):
         os.makedirs(res_dir)
-    clear.delete_files_in_folder(res_dir)
+    clear.clear_all()
 
     file_name               = f"FMEDA_{Path(schematic_file_path).stem}_{int(time.time())}.xlsx"
     file_path               = os.path.join(res_dir, file_name)
@@ -57,15 +80,14 @@ def main():
     fmeda_report            = pd.read_excel(file_path)  # Update with actual path if needed
     fault_tree              = FTA.build_fault_tree(circuit_data, fmeda_report)
     fta_results             = FTA.analyze_fault_tree(fault_tree,FIT_rates.fit_rates)
-    raw_file                = "D:/4 WORKSPACE/FASTER/FASTER/assets/Test.raw"
+    raw_file                = "D:/4 WORKSPACE/FASTER/FASTER/assets/testfiles/Test.raw"
     FTA.save_fta_results(fta_results, "Test")  
     genreport.generate_report(raw_file,schematic_file_path)
-    netlist_path                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo"
-    results_path                = "D:/4 WORKSPACE/FASTER/FASTER/assets/Test.csv"
-    netlist_file                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo/Test_wc.asc"
-    WCA.worst_case(schematic_file_path,netlist_path,results_path,netlist_file)
-    # FTA.visualize_fta(fta_results, output_file='FTA_diagram')
-#?---------------------------------------------------------------------------------------------------------------------------
+    # netlist_path                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo"
+    # results_path                = "D:/4 WORKSPACE/FASTER/FASTER/assets/Test.csv"
+    # netlist_file                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo/Test_wc.asc"
+    # WCA.worst_case(schematic_file_path,netlist_path,results_path,netlist_file)
+#? ------------------------------------------------------------------------------- 
 if __name__ == '__main__':
     main()
-#?---------------------------------------------------------------------------------------------------------------------------
+#? ------------------------------------------------------------------------------- 

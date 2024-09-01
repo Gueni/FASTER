@@ -1,6 +1,27 @@
 
-#?---------------------------------------------------------------------------------------------------------------------------
-component_failures = {                  # Define failure modes for various components
+#!/usr/bin/env python
+# coding=utf-8
+#? -------------------------------------------------------------------------------
+#?
+#?          ____      _ __                                       __
+#?         / __/___ _(_) /_  __________     ____ ___  ____  ____/ /__  _____
+#?        / /_/ __ `/ / / / / / ___/ _ \   / __ `__ \/ __ \/ __  / _ \/ ___/
+#?       / __/ /_/ / / / /_/ / /  /  __/  / / / / / / /_/ / /_/ /  __(__  ) 
+#?      /_/  \__,_/_/_/\__,_/_/   \___/  /_/ /_/ /_/\____/\__,_/\___/____/  
+#?      
+#?
+#? Name:        Failures.py
+#? Purpose:     Define failure modes for various components
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------  
+#? -------------------------------------------------------------------------------  
+
+component_failures = {                  
+   
     'voltage': {
         'value change'                  : 'Incorrect input voltage affects operation, may trigger safety mechanisms (ISO 26262 SPFM)'
     },
@@ -106,4 +127,4 @@ component_failures = {                  # Define failure modes for various compo
         'color shift'                   : 'Change in emitted color due to aging or temperature effects (Birolini Reliability Model)'
     }
 }
-#?---------------------------------------------------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------  

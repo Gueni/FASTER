@@ -1,3 +1,25 @@
+
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                                  _______________ 
+#?                                 / ____/_  __/   |
+#?                                / /_    / / / /| |
+#?                               / __/   / / / ___ |
+#?                              /_/     /_/ /_/  |_|
+#?                              
+#?
+#? Name:        genreport.py
+#? Purpose:     Generate Sim report.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------  
+#? ------------------------------------------------------------------------------- 
+
 from PyLTSpice import RawRead
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -8,29 +30,30 @@ import screeninfo
 import parse_ltspice_file
 
 def png_to_hex_base64():
-    imghexdata = ''
-    img_path = "D:/4 WORKSPACE/FASTER/FASTER/assets/Circuit.png"
-    screen = screeninfo.get_monitors()[0]
+
+    imghexdata                  = ''
+    img_path                    = "D:/4 WORKSPACE/FASTER/FASTER/assets/testfiles/Circuit.png"
+    screen                      = screeninfo.get_monitors()[0]
     screen_width, screen_height = screen.width, screen.height
-    target_width = int(screen_width * 0.5)  
-    target_height = int(screen_height * 0.4)  
+    target_width                = int(screen_width * 0.5)  
+    target_height               = int(screen_height * 0.4)  
     try:
         with Image.open(img_path) as img:
-            resized_img = img.resize((target_width, target_height), resample=Image.LANCZOS)
+            resized_img         = img.resize((target_width, target_height), resample=Image.LANCZOS)
             resized_img.save("img.png")
         img.close()
     except IOError:
         print("Unable to resize image")
     with open("img.png", "rb") as f:
-        encoded_image = base64.b64encode(f.read())
+        encoded_image           = base64.b64encode(f.read())
     f.close()
     with open("image.txt", "w") as f:
         f.write(encoded_image.decode("utf-8"))
     f.close()
     with open("image.txt","r") as tempF:
-        newlines = tempF.readlines()
+        newlines                = tempF.readlines()
         for singleline in newlines:
-            imghexdata += singleline
+            imghexdata          += singleline
     tempF.close()  
     if os.path.isfile("image.txt") and os.path.exists("image.txt"):
         os.remove("image.txt")
@@ -39,6 +62,7 @@ def png_to_hex_base64():
     return imghexdata
 
 def generate_report(raw_file_path,asc_file_path):
+    
     LTR             = RawRead(raw_file_path)
     trace_names     = LTR.get_trace_names()
     print("Trace Names:", trace_names)
@@ -98,3 +122,5 @@ def generate_report(raw_file_path,asc_file_path):
     with open('D:/4 WORKSPACE/FASTER/FASTER/RES/ltspice_analysis_report.html', 'w', encoding='utf-8') as file:
         file.write(html_content)
     print('HTML report generated successfully!')
+
+#? ------------------------------------------------------------------------------- 

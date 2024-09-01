@@ -1,4 +1,25 @@
 
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                                  _______________ 
+#?                                 / ____/_  __/   |
+#?                                / /_    / / / /| |
+#?                               / __/   / / / ___ |
+#?                              /_/     /_/ /_/  |_|
+#?                              
+#?
+#? Name:        WCA.py
+#? Purpose:     Conduct Worst case analysis.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------  
+#? ------------------------------------------------------------------------------- 
+
 from PyLTSpice import AscEditor, SimRunner  
 from PyLTSpice.sim.tookit.worst_case import WorstCaseAnalysis
 
@@ -33,3 +54,5 @@ def worst_case(asc_file,netlist_path,results_path,netlist_file):
     #     print(f"{param}: min:{logs.min_measure_value(param)} max:{logs.max_measure_value(param)}")
 
     wca.cleanup_files()  # Deletes the temporary files
+    
+#? ------------------------------------------------------------------------------- 
