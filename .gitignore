@@ -162,3 +162,7 @@ cython_debug/
 #.idea/
 /d:/4 WORKSPACE/FASTER/FASTER/assets/Test.log
 /d:/4 WORKSPACE/FASTER/FASTER/RES
+*.xlsx
+*.log
+/d:/4 WORKSPACE/FASTER/FASTER/Lib/__pycache__
+*.pyc
