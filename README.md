@@ -10,11 +10,9 @@ FASTER (Failure Analysis, Simulation, Testing, and Evaluation Report) automates 
    - [Single Simulation](#single-simulation)
    - [Sweep Simulation](#sweep-simulation)
    - [Component Reference Sweep Simulation](#component-reference-sweep-simulation)
+   - [Plotly Report Generation](#plotly-report-generation)
 2. [Installation](#installation)
-3. [Usage](#usage)
-4. [Examples](#examples)
-5. [Contributing](#contributing)
-6. [License](#license)
+3. [License](#license)
 
 ## Features
 
@@ -37,6 +35,15 @@ Conduct parameter sweeps to analyze how changes in component values affect circu
 ### Component Reference Sweep Simulation
 
 Run simulations across a range of component values and configurations, with results organized by component type. This feature is useful for evaluating the impact of different component selections on overall circuit behavior.
+
+### Plotly Report Generation
+
+FASTER generates interactive reports using Plotly. The reports include visualizations of simulation results, such as current and voltage waveforms, which help in analyzing circuit performance. Plotly's interactive features allow for zooming, panning, and detailed inspection of data points.
+
+To generate and view Plotly reports:
+
+1. After running simulations, use the Plotly integration in FASTER to create and save interactive plots.
+2. Open the generated HTML reports in a web browser to explore the simulation results interactively.
 
 ## Installation
 
