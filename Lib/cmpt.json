@@ -1,0 +1,8 @@
+{
+    "component_name": "R1",
+    "nominal_value": "10k",
+    "tolerance": 5,
+    "analysis_type": "passive",
+    "simulation_command": ".tran 1ms 10ms",
+    "output_variables": ["V(out)", "V(in)"]
+}
