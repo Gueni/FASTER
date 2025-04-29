@@ -80,7 +80,7 @@ def main():
     fmeda_report            = pd.read_excel(file_path)  # Update with actual path if needed
     fault_tree              = FTA.build_fault_tree(circuit_data, fmeda_report)
     fta_results             = FTA.analyze_fault_tree(fault_tree,FIT_rates.fit_rates)
-    raw_file                = "D:/4 WORKSPACE/FASTER/FASTER/assets/testfiles/Test.raw"
+    raw_file                = "D:/WORKSPACE/FASTER/FASTER/assets/testfiles/Test.raw"
     FTA.save_fta_results(fta_results, "Test")  
     genreport.generate_report(raw_file,schematic_file_path)
     # netlist_path                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo"

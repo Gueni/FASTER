@@ -32,7 +32,7 @@ import parse_ltspice_file
 def png_to_hex_base64():
 
     imghexdata                  = ''
-    img_path                    = "D:/4 WORKSPACE/FASTER/FASTER/assets/testfiles/Circuit.png"
+    img_path                    = "D:/WORKSPACE/FASTER/FASTER/assets/testfiles/Circuit.png"
     screen                      = screeninfo.get_monitors()[0]
     screen_width, screen_height = screen.width, screen.height
     target_width                = int(screen_width * 0.5)  
@@ -119,7 +119,7 @@ def generate_report(raw_file_path,asc_file_path):
     html_content += '<h2>Component Table</h2>'
     html_content += table_html
     html_content += '</body></html>'
-    with open('D:/4 WORKSPACE/FASTER/FASTER/RES/ltspice_analysis_report.html', 'w', encoding='utf-8') as file:
+    with open('D:/WORKSPACE/FASTER/FASTER/RES/ltspice_analysis_report.html', 'w', encoding='utf-8') as file:
         file.write(html_content)
     print('HTML report generated successfully!')
 
