@@ -83,9 +83,9 @@ def main():
     raw_file                = "D:/WORKSPACE/FASTER/FASTER/assets/testfiles/Test.raw"
     FTA.save_fta_results(fta_results, "Test")  
     genreport.generate_report(raw_file,schematic_file_path)
-    # netlist_path                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo"
-    # results_path                = "D:/4 WORKSPACE/FASTER/FASTER/assets/Test.csv"
-    # netlist_file                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo/Test_wc.asc"
+    netlist_path                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo"
+    results_path                = "D:/4 WORKSPACE/FASTER/FASTER/assets/Test.csv"
+    netlist_file                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo/Test_wc.asc"
     # WCA.worst_case(schematic_file_path,netlist_path,results_path,netlist_file)
 #? ------------------------------------------------------------------------------- 
 if __name__ == '__main__':
