@@ -37,6 +37,7 @@ from assets import FIT_rates
 import clear
 import genreport
 from WCA import LTspiceWCA  # Import LTspiceWCA from the appropriate module
+from MonteCarlo import MonteCarloSimulation
 
 def select_file():
     root            = tk.Tk()
@@ -83,7 +84,6 @@ def main():
     fta_results             = FTA.analyze_fault_tree(fault_tree,FIT_rates.fit_rates)
     raw_file                = "D:/WORKSPACE/FASTER/FASTER/assets/testfiles/Test.raw"
     FTA.save_fta_results(fta_results, "Test")  
-    genreport.generate_report(raw_file,schematic_file_path)
     try:
         circuit = os.path.normpath("D:/WORKSPACE/FASTER/FASTER/assets/testfiles/Test.asc")
         config = os.path.normpath("D:/WORKSPACE/FASTER/FASTER/Lib/cmpt.json")
@@ -93,7 +93,17 @@ def main():
     except Exception as e:
         print(f"Analysis failed: {e}")
         return 1
-    return 0
+    output_dir = r'D:\WORKSPACE\FASTER\FASTER\RES'
+
+    component_tolerances = {
+        "R1": 0.05,
+        "R2": 0.10,
+    }
+
+    mc_sim = MonteCarloSimulation(circuit, output_dir, **component_tolerances)
+    results = mc_sim.monte_carlo_simulation(num_simulations=10)
+    fig = mc_sim.plot_simulation_results(results)
+    genreport.generate_report(fig,raw_file,schematic_file_path)
 #? ------------------------------------------------------------------------------- 
 if __name__ == '__main__':
     main()

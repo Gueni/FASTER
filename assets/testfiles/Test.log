@@ -1,6 +1,6 @@
 LTspice 24.0.12 for Windows
 Circuit: * D:\WORKSPACE\FASTER\FASTER\assets\testfiles\Test.asc
-Start Time: Tue May  6 14:11:47 2025
+Start Time: Tue May  6 15:36:37 2025
 solver = Normal
 Maximum thread count: 16
 
@@ -45,5 +45,5 @@ tnom = 27
 temp = 27
 method = modified trap
 .step r1=100000
-Total elapsed time: 0.124 seconds.
+Total elapsed time: 0.139 seconds.
 

@@ -60,7 +60,6 @@ class LTspiceWCA:
                 self.results[case] = self._parse_raw(raw_file)
             
             self._analyze_results(config.get('output_variables', ['V(out)']))
-            self._generate_plots(show=show_plots)
             
             print("\nAnalysis complete!")
             return self.results
@@ -155,35 +154,6 @@ class LTspiceWCA:
 
         self.results['analysis'] = analysis
 
-    def _generate_plots(self, show: bool = False):
-        """Generate comparison plots."""
-        if 'analysis' not in self.results:
-            return
-            
-        for var in self.results['analysis']:
-            plt.figure(figsize=(10, 5))
-            
-            # Get time vector if available
-            time = self.results['nominal'].get_time() if self.results['nominal'].get_time() is not None else \
-                   np.arange(len(self.results['nominal'].get_data(var)))
-            
-            plt.plot(time, self.results['nominal'].get_data(var), label='Nominal')
-            plt.plot(time, self.results['min_case'].get_data(var), '--', label='Min Case')
-            plt.plot(time, self.results['max_case'].get_data(var), '--', label='Max Case')
-            
-            plt.title(f'WCA: {var}')
-            plt.xlabel('Time' if self.results['nominal'].get_time() is not None else 'Points')
-            plt.ylabel(var)
-            plt.legend()
-            plt.grid(True)
-            
-            plot_path = os.path.join(self.temp_dir, f"{var.replace('(', '_').replace(')', '_')}.png")
-            plt.savefig(plot_path)
-            if show:
-                plt.show()
-            else:
-                plt.close()
-            print(f"Saved plot: {plot_path}")
 
     def cleanup(self):
         """Clean up temporary files."""

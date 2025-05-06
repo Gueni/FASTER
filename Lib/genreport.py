@@ -61,7 +61,7 @@ def png_to_hex_base64():
         os.remove("img.png")
     return imghexdata
 
-def generate_report(raw_file_path,asc_file_path):
+def generate_report(mtclo,raw_file_path,asc_file_path):
     
     LTR             = RawRead(raw_file_path)
     trace_names     = LTR.get_trace_names()
@@ -80,7 +80,7 @@ def generate_report(raw_file_path,asc_file_path):
             fig.add_trace(go.Scatter(x=x_data, y=y_data, mode='lines', name=f'{trace_name} - {steps[step]}'))
         fig.update_layout(title=f'{trace_name}', xaxis_title='Time (s)', yaxis_title='Value')
         figs.append(fig)
-
+    figs.append(mtclo)
     circuit_data    = parse_ltspice_file.parse_ltspice_file(asc_file_path)
     components      = circuit_data['components']
     component_names = [comp['name'] for comp in components]
