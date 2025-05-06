@@ -36,6 +36,7 @@ import FTA
 from assets import FIT_rates
 import clear
 import genreport
+from WCA import LTspiceWCA  # Import LTspiceWCA from the appropriate module
 
 def select_file():
     root            = tk.Tk()
@@ -83,10 +84,16 @@ def main():
     raw_file                = "D:/WORKSPACE/FASTER/FASTER/assets/testfiles/Test.raw"
     FTA.save_fta_results(fta_results, "Test")  
     genreport.generate_report(raw_file,schematic_file_path)
-    netlist_path                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo"
-    results_path                = "D:/4 WORKSPACE/FASTER/FASTER/assets/Test.csv"
-    netlist_file                = "D:/4 WORKSPACE/FASTER/FASTER/RES/tempo/Test_wc.asc"
-    # WCA.worst_case(schematic_file_path,netlist_path,results_path,netlist_file)
+    try:
+        circuit = os.path.normpath("D:/WORKSPACE/FASTER/FASTER/assets/testfiles/Test.asc")
+        config = os.path.normpath("D:/WORKSPACE/FASTER/FASTER/Lib/cmpt.json")
+        
+        analyzer = LTspiceWCA()
+        results = analyzer.run_analysis(circuit, config, show_plots=True)
+    except Exception as e:
+        print(f"Analysis failed: {e}")
+        return 1
+    return 0
 #? ------------------------------------------------------------------------------- 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,7 @@
 {
     "component_name": "R1",
-    "nominal_value": "100",
-    "tolerance": 5,
+    "nominal_value": "100000",
+    "tolerance": 12,
     "analysis_type": "passive",
     "simulation_type": "transient",
     "output_variables": ["V(out)", "I(R1)"]
