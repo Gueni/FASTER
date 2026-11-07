@@ -11,19 +11,23 @@ schematic it produces:
 - **Monte Carlo** – statistical tolerance analysis with real LTspice runs
 - **HTML report** – one self-contained, interactive (Plotly) page with all of the above
 
-Simulations run in parallel through PyLTSpice.
+Simulations run in parallel through PyLTSpice. Everything is available from a
+modern desktop app or from the command line.
+
+![FASTER - circuit page, dark theme](docs/img/circuit-dark.png)
 
 ## Table of Contents
 
 1. [Installation](#installation)
-2. [Usage](#usage)
-3. [Configuration](#configuration)
-4. [Reliability data](#reliability-data)
-5. [ISO 26262 hardware metrics](#iso-26262-hardware-metrics)
-6. [Outputs](#outputs)
-7. [Project structure](#project-structure)
-8. [Using the library](#using-the-library)
-9. [License](#license)
+2. [Desktop app](#desktop-app)
+3. [Command line](#command-line)
+4. [Configuration](#configuration)
+5. [Reliability data](#reliability-data)
+6. [ISO 26262 hardware metrics](#iso-26262-hardware-metrics)
+7. [Outputs](#outputs)
+8. [Project structure](#project-structure)
+9. [Using the library](#using-the-library)
+10. [License](#license)
 
 ## Installation
 
@@ -38,11 +42,54 @@ pip install -r requirements.txt
 LTspice is found automatically in the usual install folders. Otherwise set
 `"ltspice_path"` in `config.json` or the `FASTER_LTSPICE` environment variable.
 
-## Usage
+## Desktop app
 
 ```bash
-python main.py tests/Test.asc        # full analysis
-python main.py                                  # pick the schematic in a file dialog
+python main.py                    # start the app (reopens the last schematic)
+python main.py --gui circuit.asc  # start the app with a schematic
+python -m Lib.gui                 # same, as a module
+```
+
+The app (PySide6 / Qt 6) shares its design with Flash: custom title bar,
+collapsible sidebar, light / dark / system theme, toasts, a live console with
+progress bar and Stop, and every setting remembered between sessions.
+
+| Page | What you can do |
+|---|---|
+| **Circuit** | Open or drop a `.asc`. The schematic is drawn in the app (zoom, pan, hover read-out). Click a part to select it, double-click to edit its value. Edit values in the component table and SPICE directives in the list; the drawing updates instantly. Save, Save as, Revert, Open in LTspice. |
+| **Analysis** | Choose the steps (nominal simulation, worst-case, Monte Carlo; FMEDA / ISO 26262 / FTA / report always). Mission profile (temperature, MIL-HDBK-217F environment, mission time), target ASIL, per-component diagnostic coverage / latent coverage / safe fraction, per-component tolerances for WCA and Monte Carlo (defaults from `tol=` in the schematic), output signals, run count, distribution, seed. Shows the number of LTspice simulations before you run. |
+| **Results** | KPI cards (verdict, SPFM, LFM, PMHF in green / red, system FIT, MTTF, worst case, Monte Carlo spread) and tabs with every result table (ISO 26262, λ per component, FMEDA, FTA, WCA, Monte Carlo, traces), the output files and `log.log`. Open the HTML report or the run folder. |
+| **Waveforms** | Fast native plots of every simulated voltage and current, Monte Carlo runs overlaid, crosshair read-out, any `.raw` file. |
+| **Library** | All component classes and failure modes with their sources; override the base FIT of a class (e.g. supplier data). |
+| **History** | Every previous run with its verdict and metrics; reopen, open the report or folder, delete. |
+| **Settings** | Theme, LTspice executable, output folder, parallel simulations, timeout, what to do when a run finishes. |
+
+Analyses run in a separate process: the window never freezes and **Stop** (Esc)
+ends the run and every LTspice instance. Unsaved edits are analysed from a
+temporary working copy under the circuit's name, so you can try values without
+touching the schematic file.
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+1` … `Ctrl+7` | Switch page |
+| `Ctrl+O` / `Ctrl+S` | Open / save schematic |
+| `Ctrl+R` or `Ctrl+Enter` | Run the analysis |
+| `Esc` | Stop the analysis |
+| `Ctrl+J` / `Ctrl+L` | Show / hide console, clear console |
+| `Ctrl+T` / `Ctrl+B` | Toggle theme, collapse sidebar |
+
+<p align="center">
+  <img src="docs/img/results-dark.png" width="49%" alt="Results page">
+  <img src="docs/img/waveforms-dark.png" width="49%" alt="Waveforms page">
+</p>
+<p align="center">
+  <img src="docs/img/analysis-light.png" width="70%" alt="Analysis page, light theme">
+</p>
+
+## Command line
+
+```bash
+python main.py tests/Test.asc                   # full analysis
 python main.py circuit.asc --no-sim             # FMEDA + FTA only (no LTspice needed)
 python main.py circuit.asc --mc-runs 500 --open # more Monte Carlo runs, open the report
 ```
@@ -51,6 +98,7 @@ python main.py circuit.asc --mc-runs 500 --open # more Monte Carlo runs, open th
 |---|---|
 | `-c, --config FILE` | configuration file (default `config.json`) |
 | `-o, --output DIR` | output root (default `data/`) |
+| `--name NAME` | circuit name used for the run folder and output files |
 | `--image FILE` | use this picture instead of the automatic schematic export |
 | `--mc-runs N` | override the Monte Carlo run count |
 | `--no-sim`, `--no-wca`, `--no-mc` | skip all simulations / WCA / Monte Carlo |
@@ -159,6 +207,8 @@ Each run creates `data/<circuit>_<timestamp>/`:
 | `<circuit>.asc` | copy of the analysed schematic (results stay traceable to the exact circuit) |
 | `schematic_<circuit>.svg` | schematic image exported from the `.asc` |
 | `report_<circuit>.html` | interactive report (works offline) |
+| `nominal_<circuit>.raw` | LTspice result of the nominal simulation (Waveforms page) |
+| `summary.json` | key results of the run (Results and History pages) |
 | `log.log` | full run log: banner, run info, package versions, config, every log message (DEBUG and up, incl. LTspice runs) and all result tables |
 
 ## Project structure
@@ -169,12 +219,17 @@ config.json             analysis settings
 Lib/
   core/                 config.py (paths, LTspice discovery, config) · cleanup.py · banner.py
   knowledge/            components.py (type detection) · failures.py · fit_rates.py
-  schematic/            asc_parser.py · symbols.py (.asy library) · renderer.py (SVG export)
+  schematic/            asc_parser.py · asc_writer.py (edit values / directives) · symbols.py (.asy library) · renderer.py (SVG export)
   simulation/           runner.py (LTspice runner, sweeps) · waveforms.py (.raw helpers, plots)
   analysis/             fmeda.py · iso26262.py · fta.py · wca.py · montecarlo.py
   reporting/            report.py (HTML report) · runlog.py (log.log with rich tables)
+  gui/                  app.py · main_window.py · theme.py · icons.py · titlebar.py · widgets.py
+                        session.py (open circuit, edits) · worker.py (analysis process)
+                        schematic_view.py · settings.py
+    pages/              circuit · analysis · results · waveforms · library · history · settings
   pipeline.py           full analysis flow
 tests/                  example circuit (Test.asc + simulation results)
+docs/img/               screenshots
 data/                   analysis results
 ```
 
