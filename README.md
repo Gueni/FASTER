@@ -156,6 +156,7 @@ Each run creates `data/<circuit>_<timestamp>/`:
 | `WCA_<circuit>.xlsx` | worst deviation per output, tolerances, simulated cases |
 | `montecarlo_<circuit>_waveforms.csv` | output waveform of every run on a common time axis |
 | `montecarlo_<circuit>_samples.csv` | component values and peak/min/max/mean/RMS per run |
+| `<circuit>.asc` | copy of the analysed schematic (results stay traceable to the exact circuit) |
 | `schematic_<circuit>.svg` | schematic image exported from the `.asc` |
 | `report_<circuit>.html` | interactive report (works offline) |
 | `log.log` | full run log: banner, run info, package versions, config, every log message (DEBUG and up, incl. LTspice runs) and all result tables |
