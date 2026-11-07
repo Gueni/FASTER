@@ -1,4 +1,23 @@
-# Purpose:     Edit LTspice schematics: component values / attributes and SPICE directives.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                 ___   _____ ______   _       __     _ __
+#?                /   | / ___// ____/  | |     / /____(_) /____  _____
+#?               / /| | \__ \/ /       | | /| / / ___/ / __/ _ \/ ___/
+#?              / ___ |___/ / /___     | |/ |/ / /  / / /_/  __/ /
+#?             /_/  |_/____/\____/     |__/|__/_/  /_/\__/\___/_/
+#?
+#? Name:        asc_writer.py
+#? Purpose:     Edit LTspice schematics: component values / attributes and SPICE directives.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Text-level editing of ``.asc`` schematics.
 
 Only the edited lines change; everything else (layout, windows, comments) is
@@ -14,6 +33,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+#? -------------------------------------------------------------------------------
 @dataclass
 class AscDocument:
     path     : Path
@@ -25,7 +45,7 @@ class AscDocument:
     def text(self) -> str:
         return '\n'.join(self.lines)
 
-    # -- loading / saving ----------------------------------------------------------
+    #? loading / saving                                                             
     @classmethod
     def load(cls, path: str | os.PathLike) -> 'AscDocument':
         path = Path(path)
@@ -52,7 +72,7 @@ class AscDocument:
             self.path = target
         return target
 
-    # -- components ----------------------------------------------------------------
+    #? components                                                                   
     def _blocks(self) -> list[tuple[int, int, str | None]]:
         """``(first line, last line, InstName)`` of every SYMBOL block."""
         blocks, start, name = [], None, None
@@ -105,7 +125,7 @@ class AscDocument:
         """Set several values; return the names that were not found."""
         return [n for n, v in values.items() if not self.set_value(n, str(v))]
 
-    # -- directives ----------------------------------------------------------------
+    #? directives                                                                   
     _TEXT = re.compile(r'^(TEXT\s+-?\d+\s+-?\d+\s+\S+\s+\d+\s+)([!;])(.*)$')
 
     def directives(self) -> list[tuple[int, str]]:
@@ -137,3 +157,5 @@ class AscDocument:
 
     def remove_line(self, line_index: int) -> None:
         del self.lines[line_index]
+
+#? -------------------------------------------------------------------------------

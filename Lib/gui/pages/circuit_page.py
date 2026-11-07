@@ -1,4 +1,23 @@
-# Purpose:     Circuit page: open, view and edit the LTspice schematic (values and SPICE directives).
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                           _______                 _ __
+#?                          / ____(_)___________  __(_) /_
+#?                         / /   / / ___/ ___/ / / / / __/
+#?                        / /___/ / /  / /__/ /_/ / / /_
+#?                        \____/_/_/   \___/\__,_/_/\__/
+#?
+#? Name:        circuit_page.py
+#? Purpose:     Circuit page: open, view and edit the LTspice schematic (values and SPICE directives).
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Circuit page."""
 
 from __future__ import annotations
@@ -102,15 +121,15 @@ class CircuitPage(BasePage):
         # toolbar
         bar = QHBoxLayout()
         bar.setSpacing(8)
-        self.open_btn = button('Open', 'open', tip='Open a schematic (Ctrl+O)', slot=ctx.open_dialog)
+        self.open_btn    = button('Open', 'open', tip='Open a schematic (Ctrl+O)', slot=ctx.open_dialog)
         self.recent_menu = QMenu(self)
         self.recent_menu.aboutToShow.connect(self._fill_recent)
         self.recent_btn = icon_button('history', 'Recent schematics')
         self.recent_btn.setPopupMode(self.recent_btn.ToolButtonPopupMode.InstantPopup)
         self.recent_btn.setMenu(self.recent_menu)
-        self.save_btn   = button('Save', 'save', tip='Save edits to the schematic (Ctrl+S)', slot=ctx.save)
-        self.saveas_btn = button('Save as…', 'save-as', slot=ctx.save_as)
-        self.revert_btn = button('Revert', 'undo', tip='Discard unsaved edits', slot=ctx.revert)
+        self.save_btn    = button('Save', 'save', tip='Save edits to the schematic (Ctrl+S)', slot=ctx.save)
+        self.saveas_btn  = button('Save as…', 'save-as', slot=ctx.save_as)
+        self.revert_btn  = button('Revert', 'undo', tip='Discard unsaved edits', slot=ctx.revert)
         self.ltspice_btn = button('Open in LTspice', 'external', 'ghost', slot=ctx.open_in_ltspice)
         for w in (self.open_btn, self.recent_btn, self.save_btn, self.saveas_btn, self.revert_btn):
             bar.addWidget(w)
@@ -186,7 +205,7 @@ class CircuitPage(BasePage):
         theme().changed.connect(lambda *_: self.session.is_open and self._render_timer.start())
         self.reload()
 
-    # -- refresh -----------------------------------------------------------------------
+    #? refresh                                                                          
     def reload(self) -> None:
         has = self.session.is_open
         self.drop.setVisible(not has)
@@ -228,9 +247,9 @@ class CircuitPage(BasePage):
         self.schematic.set_rendering(rendering, self._tips())
 
     def _fill_table(self, keep_selection: bool = False) -> None:
-        selected = self._current_name() if keep_selection else ''
+        selected      = self._current_name() if keep_selection else ''
         self._loading = True
-        comps = self.session.components()
+        comps         = self.session.components()
         self.table.setRowCount(len(comps))
         for r, c in enumerate(comps):
             attrs = ', '.join(f'{k}={v}' for k, v in c['attributes'].items() if k not in ('InstName', 'Value'))
@@ -267,9 +286,9 @@ class CircuitPage(BasePage):
                                for c in range(self.table.columnCount()))
             self.table.setRowHidden(r, not hit)
 
-    # -- interaction ---------------------------------------------------------------------
+    #? interaction                                                                        
     def _current_name(self) -> str:
-        r = self.table.currentRow()
+        r  = self.table.currentRow()
         it = self.table.item(r, 0) if r >= 0 else None
         return it.text() if it else ''
 
@@ -330,7 +349,14 @@ class CircuitPage(BasePage):
         for path in files:
             self.recent_menu.addAction(Path(path).name, lambda p=path: self.ctx.open_path(p)).setToolTip(path)
 
-    # -- drag & drop on the whole page -----------------------------------------------------
+    def showEvent(self, event) -> None:      # noqa: N802
+        super().showEvent(event)
+        if not getattr(self, '_sized', False) and self.split.width() > 0:
+            w = self.split.width()
+            self.split.setSizes([int(w * 0.6), int(w * 0.4)])
+            self._sized = True
+
+    #? drag & drop on the whole page                                                        
     def dragEnterEvent(self, e) -> None:      # noqa: N802
         if e.mimeData().hasUrls():
             e.acceptProposedAction()
@@ -340,3 +366,5 @@ class CircuitPage(BasePage):
             if url.toLocalFile().lower().endswith('.asc'):
                 self.ctx.open_path(url.toLocalFile())
                 return
+
+#? -------------------------------------------------------------------------------

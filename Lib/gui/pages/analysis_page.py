@@ -1,4 +1,24 @@
-# Purpose:     Analysis page: choose the analyses and set every parameter (mission profile, ISO 26262, tolerances).
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                       ___                __           _
+#?                      /   |  ____  ____ _/ /_  _______(_)____
+#?                     / /| | / __ \/ __ `/ / / / / ___/ / ___/
+#?                    / ___ |/ / / / /_/ / / /_/ (__  ) (__  )
+#?                   /_/  |_/_/ /_/\__,_/_/\__, /____/_/____/
+#?                                        /____/
+#?
+#? Name:        analysis_page.py
+#? Purpose:     Analysis page: choose the analyses and set every parameter (mission profile, ISO 26262, tolerances).
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Analysis setup page.
 
 Global choices (steps, mission profile, ASIL, Monte Carlo settings) are
@@ -25,8 +45,8 @@ from ..widgets import Card, ScrollPage, button, combo, field, flow, label, row
 PASSIVE     = ('resistor', 'capacitor', 'electrolytic capacitor', 'inductor', 'ferrite bead')
 DEFAULT_TOL = {'resistor': 1.0, 'capacitor': 10.0, 'electrolytic capacitor': 20.0, 'inductor': 20.0,
                'ferrite bead': 25.0}
-DC_LEVELS   = ['none', 'low', 'medium', 'high']
-DC_TIPS     = 'Diagnostic coverage (ISO 26262-5 Annex D): none 0 %, low 60 %, medium 90 %, high 99 %'
+DC_LEVELS = ['none', 'low', 'medium', 'high']
+DC_TIPS   = 'Diagnostic coverage (ISO 26262-5 Annex D): none 0 %, low 60 %, medium 90 %, high 99 %'
 TWO_PIN     = ('resistor', 'capacitor', 'electrolytic capacitor', 'inductor', 'ferrite bead', 'diode', 'zener',
                'schottky', 'tvs', 'LED', 'voltage', 'current', 'fuse', 'battery')
 
@@ -69,7 +89,7 @@ def _text_item(text: str) -> QTableWidgetItem:
 
 
 #? -------------------------------------------------------------------------------
-def _table(headers: list[str]) -> QTableWidget:
+def _table(headers: list[str], stretch: int = 2) -> QTableWidget:
     t = QTableWidget(0, len(headers))
     t.setHorizontalHeaderLabels(headers)
     t.verticalHeader().setVisible(False)
@@ -78,7 +98,8 @@ def _table(headers: list[str]) -> QTableWidget:
     t.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
     t.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
     t.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-    t.horizontalHeader().setStretchLastSection(True)
+    t.horizontalHeader().setSectionResizeMode(stretch, QHeaderView.ResizeMode.Stretch)
+    t.horizontalHeader().setMinimumSectionSize(90)
     t.setMinimumHeight(220)
     return t
 
@@ -92,8 +113,8 @@ class AnalysisPage(ScrollPage):
 
     def __init__(self, ctx, parent=None) -> None:
         super().__init__(ctx, parent)
-        self.session = ctx.session
-        self.project = load_config()
+        self.session   = ctx.session
+        self.project   = load_config()
         self._building = False
         self._build_run_card()
         self._build_profile_card()
@@ -107,13 +128,13 @@ class AnalysisPage(ScrollPage):
         self.session.closed.connect(self.load_circuit)
         self.load_circuit()
 
-    # -- cards ---------------------------------------------------------------------------
+    #? cards                                                                              
     def _build_run_card(self) -> None:
         card = Card('Run', 'Pick the steps to perform. FMEDA, ISO 26262 metrics, FTA, the schematic image, '
                     'the HTML report and log.log are always produced.', 'play')
-        self.chk_sim = QCheckBox('Nominal simulation')
-        self.chk_wca = QCheckBox('Worst-case analysis')
-        self.chk_mc  = QCheckBox('Monte Carlo')
+        self.chk_sim  = QCheckBox('Nominal simulation')
+        self.chk_wca  = QCheckBox('Worst-case analysis')
+        self.chk_mc   = QCheckBox('Monte Carlo')
         self.chk_keep = QCheckBox('Keep LTspice files')
         self.chk_sim.setToolTip('Run LTspice: needed for waveforms, WCA and Monte Carlo')
         for c in (self.chk_sim, self.chk_wca, self.chk_mc, self.chk_keep):
@@ -160,7 +181,7 @@ class AnalysisPage(ScrollPage):
         self.grid.add(card)
 
     def _build_mc_card(self) -> None:
-        card = Card('Monte Carlo', 'Random component values inside their tolerance, simulated in parallel.', 'dice')
+        card         = Card('Monte Carlo', 'Random component values inside their tolerance, simulated in parallel.', 'dice')
         self.mc_runs = QSpinBox()
         self.mc_runs.setRange(2, 100_000)
         self.mc_runs.setSingleStep(10)
@@ -177,7 +198,7 @@ class AnalysisPage(ScrollPage):
         self.grid.add(card)
 
     def _build_wca_card(self) -> None:
-        card = Card('Worst-case outputs', 'Signals compared between the nominal and the extreme cases.', 'target')
+        card         = Card('Worst-case outputs', 'Signals compared between the nominal and the extreme cases.', 'target')
         self.outputs = QListWidget()
         self.outputs.setMinimumHeight(170)
         self.outputs.itemChanged.connect(lambda *_: self._update_estimate())
@@ -207,7 +228,7 @@ class AnalysisPage(ScrollPage):
         card = Card('ISO 26262 safety mechanisms', 'Safe fraction and diagnostic coverage per component. '
                     + DC_TIPS + '.', 'shield')
         self.iso_table = _table(['Component', 'Type', 'Safety related', 'Diagnostic coverage', 'Latent coverage',
-                                 'Safe fraction'])
+                                 'Safe fraction'], stretch=1)
         card.add(self.iso_table)
         self.bulk_dc  = combo(DC_LEVELS, 'medium')
         self.bulk_lat = combo(DC_LEVELS, 'medium')
@@ -218,15 +239,15 @@ class AnalysisPage(ScrollPage):
                      None, stretch=[0, 0, 0, 0, 0, 1]))
         self.grid.add(card, span=3)
 
-    # -- circuit -------------------------------------------------------------------------
+    #? circuit                                                                            
     def load_circuit(self) -> None:
         """Rebuild the tables for the open circuit: defaults < config.json < saved setup."""
         self._building = True
-        comps = self.session.components() if self.session.is_open else []
-        saved = settings.load_circuit_state(self.session.path) if self.session.is_open else {}
-        proj_wca = self.project['wca'].get('components', {}) or {}
-        proj_mc  = self.project['montecarlo'].get('tolerances', {}) or {}
-        proj_iso = self.project['iso26262']
+        comps          = self.session.components() if self.session.is_open else []
+        saved          = settings.load_circuit_state(self.session.path) if self.session.is_open else {}
+        proj_wca       = self.project['wca'].get('components', {}) or {}
+        proj_mc        = self.project['montecarlo'].get('tolerances', {}) or {}
+        proj_iso       = self.project['iso26262']
 
         self.tol_table.setRowCount(0)
         self.iso_table.setRowCount(0)
@@ -237,12 +258,12 @@ class AnalysisPage(ScrollPage):
             nominal = numeric(value)
             # tolerances
             if nominal is not None:
-                tol = _spec_tolerance(comp) or DEFAULT_TOL.get(ctype, 5.0)
+                tol    = _spec_tolerance(comp) or DEFAULT_TOL.get(ctype, 5.0)
                 in_wca = ctype in PASSIVE
                 in_mc  = ctype in PASSIVE
                 if name in proj_wca or name in proj_mc:
-                    entry  = proj_wca.get(name, proj_mc.get(name))
-                    tol    = float(entry['tolerance'] if isinstance(entry, dict) else entry)
+                    entry = proj_wca.get(name, proj_mc.get(name))
+                    tol   = float(entry['tolerance'] if isinstance(entry, dict) else entry)
                     in_wca, in_mc = name in proj_wca, name in proj_mc
                 tol, in_wca, in_mc = saved.get('tol', {}).get(name, [tol, in_wca, in_mc])
                 r = self.tol_table.rowCount()
@@ -260,9 +281,9 @@ class AnalysisPage(ScrollPage):
                 self.tol_table.setItem(r, 4, _check_item(bool(in_wca)))
                 self.tol_table.setItem(r, 5, _check_item(bool(in_mc)))
             # ISO 26262
-            sr  = name not in (proj_iso.get('not_safety_related') or [])
-            dc  = _level(self._project_value(proj_iso.get('diagnostic_coverage'), name, ctype))
-            lat = _level(self._project_value(proj_iso.get('latent_coverage'), name, ctype))
+            sr   = name not in (proj_iso.get('not_safety_related') or [])
+            dc   = _level(self._project_value(proj_iso.get('diagnostic_coverage'), name, ctype))
+            lat  = _level(self._project_value(proj_iso.get('latent_coverage'), name, ctype))
             safe = float(self._project_value(proj_iso.get('safe_fraction'), name, ctype) or 0)
             safe = safe * 100 if safe <= 1 else safe
             sr, dc, lat, safe = saved.get('iso', {}).get(name, [sr, dc, lat, safe])
@@ -300,7 +321,7 @@ class AnalysisPage(ScrollPage):
         self.mc_output.clear()
         self.mc_output.addItems(candidates)
         mc_out = saved.get('mc_output') or self.project['montecarlo'].get('output_variable') or (chosen[:1] or [''])[0]
-        idx = self.mc_output.findText(mc_out, Qt.MatchFlag.MatchFixedString)
+        idx    = self.mc_output.findText(mc_out, Qt.MatchFlag.MatchFixedString)
         if idx >= 0:
             self.mc_output.setCurrentIndex(idx)
         elif mc_out:
@@ -324,9 +345,9 @@ class AnalysisPage(ScrollPage):
     def _candidates(self) -> list[str]:
         if not self.session.is_open:
             return []
-        circ  = self.session.circuit
-        nets  = sorted({n for n in circ['flags'].values() if n != '0'}, key=str.lower)
-        out   = [f'V({n})' for n in nets]
+        circ = self.session.circuit
+        nets = sorted({n for n in circ['flags'].values() if n != '0'}, key=str.lower)
+        out  = [f'V({n})' for n in nets]
         out  += [f"I({c['name']})" for c in circ['components'] if c['type'] in TWO_PIN]
         return out
 
@@ -337,7 +358,7 @@ class AnalysisPage(ScrollPage):
             settings.save_circuit_state(self.session.path, state)
         self.load_circuit()
 
-    # -- state ---------------------------------------------------------------------------
+    #? state                                                                              
     def circuit_state(self) -> dict:
         tol = {}
         for r in range(self.tol_table.rowCount()):
@@ -385,7 +406,7 @@ class AnalysisPage(ScrollPage):
         self.mc_seed.setValue(int(g.get('seed', pro['montecarlo'].get('seed') or 0)))
         self.max_corners.setValue(int(g.get('corners', pro['wca'].get('max_corner_components', 8))))
 
-    # -- bulk actions -------------------------------------------------------------------
+    #? bulk actions                                                                      
     def _bulk_tol(self, mode: str) -> None:
         comps = {c['name']: c for c in self.session.components()}
         for r in range(self.tol_table.rowCount()):
@@ -402,7 +423,7 @@ class AnalysisPage(ScrollPage):
         for dc, lat, _ in self._iso_widgets.values():
             (dc if col == 3 else lat).setCurrentText(level)
 
-    # -- estimate / config ----------------------------------------------------------------
+    #? estimate / config                                                                   
     def _selected(self, col: int) -> dict[str, float]:
         out = {}
         for r in range(self.tol_table.rowCount()):
@@ -417,7 +438,7 @@ class AnalysisPage(ScrollPage):
         if not self.session.is_open:
             self.estimate.setText('Open a schematic to start.')
             return
-        sims = 0
+        sims  = 0
         parts = []
         if self.chk_sim.isChecked():
             sims += 1
@@ -476,3 +497,5 @@ class AnalysisPage(ScrollPage):
     def set_busy(self, busy: bool) -> None:
         super().set_busy(busy)
         self.run_btn.setEnabled(not busy and self.session.is_open)
+
+#? -------------------------------------------------------------------------------

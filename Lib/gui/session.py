@@ -1,4 +1,23 @@
-# Purpose:     The open circuit shared by all pages: load, edit, save, working copy for analyses.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                         _____                _
+#?                        / ___/___  __________(_)___  ____
+#?                        \__ \/ _ \/ ___/ ___/ / __ \/ __ \
+#?                       ___/ /  __(__  |__  ) / /_/ / / / /
+#?                      /____/\___/____/____/_/\____/_/ /_/
+#?
+#? Name:        session.py
+#? Purpose:     The open circuit shared by all pages: load, edit, save, working copy for analyses.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Circuit session.
 
 Edits (component values, attributes, SPICE directives) are applied to an
@@ -41,7 +60,7 @@ class CircuitSession(QObject):
         self._saved_text = ''
         self._circuit: dict | None = None
 
-    # -- state -------------------------------------------------------------------------
+    #? state                                                                            
     @property
     def is_open(self) -> bool:
         return self.doc is not None
@@ -72,7 +91,7 @@ class CircuitSession(QObject):
     def rendering(self, colors: dict[str, str]) -> Rendering:
         return render(self.doc.path, self.doc.text, colors)
 
-    # -- file operations ---------------------------------------------------------------
+    #? file operations                                                                  
     def open(self, path: str | Path) -> None:
         self.doc         = AscDocument.load(path)
         self._saved_text = self.doc.text
@@ -104,7 +123,7 @@ class CircuitSession(QObject):
         self.changed.emit()
         self.modified_changed.emit(self.modified)
 
-    # -- edits -------------------------------------------------------------------------
+    #? edits                                                                            
     def set_value(self, name: str, value: str) -> bool:
         ok = self.doc.set_value(name, value.strip())
         if ok:
@@ -132,7 +151,7 @@ class CircuitSession(QObject):
         self.doc.remove_line(line_index)
         self._edited()
 
-    # -- analyses ----------------------------------------------------------------------
+    #? analyses                                                                         
     def analysis_input(self) -> tuple[Path, str, list[Path]]:
         """``(schematic to analyse, circuit name, files to delete afterwards)``."""
         if not self.modified:
@@ -140,3 +159,5 @@ class CircuitSession(QObject):
         work = self.doc.path.with_name(f'~{self.name}.faster.asc')
         self.doc.save(work)             # saving to another path keeps doc.path on the original
         return work, self.name, [work]
+
+#? -------------------------------------------------------------------------------

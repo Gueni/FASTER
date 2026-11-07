@@ -1,4 +1,24 @@
-# Purpose:     Settings page: theme, LTspice, output folder, performance and behaviour.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                       _____      __  __  _
+#?                      / ___/___  / /_/ /_(_)___  ____ ______
+#?                      \__ \/ _ \/ __/ __/ / __ \/ __ `/ ___/
+#?                     ___/ /  __/ /_/ /_/ / / / / /_/ (__  )
+#?                    /____/\___/\__/\__/_/_/ /_/\__, /____/
+#?                                              /____/
+#?
+#? Name:        settings_page.py
+#? Purpose:     Settings page: theme, LTspice, output folder, performance and behaviour.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Application settings."""
 
 from __future__ import annotations
@@ -23,13 +43,13 @@ class SettingsPage(ScrollPage):
 
     def __init__(self, ctx, parent=None) -> None:
         super().__init__(ctx, parent)
-        look = Card('Appearance', '', 'sun')
+        look             = Card('Appearance', '', 'sun')
         self.theme_combo = combo(['system', 'light', 'dark'], settings.get('ui/theme', 'system'))
         self.theme_combo.currentTextChanged.connect(self._theme)
         look.add(field('Theme', self.theme_combo, 'Ctrl+T toggles light / dark'))
         self.grid.add(look)
 
-        lt = Card('LTspice', 'Leave empty to detect it automatically.', 'cpu')
+        lt           = Card('LTspice', 'Leave empty to detect it automatically.', 'cpu')
         self.ltspice = PathField('Auto-detect', 'LTspice (*.exe);;All files (*)', caption='LTspice executable')
         self.ltspice.setText(settings.get('run/ltspice', ''))
         self.ltspice.changed.connect(lambda t: (settings.put('run/ltspice', t), self._detect()))
@@ -38,12 +58,12 @@ class SettingsPage(ScrollPage):
         lt.add(self.detected)
         self.grid.add(lt)
 
-        out = Card('Results', 'Every run creates a time-stamped folder here.', 'folder')
+        out         = Card('Results', 'Every run creates a time-stamped folder here.', 'folder')
         self.output = PathField(str(DATA_DIR), directory=True, caption='Output folder')
         self.output.setText(settings.get('run/output', ''))
         self.output.changed.connect(lambda t: (settings.put('run/output', t), self.ctx.history_page.refresh()))
         out.add(field('Output folder', self.output))
-        self.open_report = QCheckBox('Open the HTML report when an analysis finishes')
+        self.open_report  = QCheckBox('Open the HTML report when an analysis finishes')
         self.show_results = QCheckBox('Show the Results page when an analysis finishes')
         self.open_report.setChecked(settings.get('run/open_report', False))
         self.show_results.setChecked(settings.get('run/show_results', True))
@@ -53,7 +73,7 @@ class SettingsPage(ScrollPage):
         out.add(self.show_results)
         self.grid.add(out)
 
-        perf = Card('Performance', 'Simulations run in parallel LTspice processes.', 'zap')
+        perf          = Card('Performance', 'Simulations run in parallel LTspice processes.', 'zap')
         self.parallel = QSpinBox()
         self.parallel.setRange(1, 64)
         self.parallel.setValue(settings.get('run/parallel', max(2, (os.cpu_count() or 4) // 2)))
@@ -66,7 +86,7 @@ class SettingsPage(ScrollPage):
         perf.add(row(field('Parallel simulations', self.parallel), field('Timeout per simulation', self.timeout)))
         self.grid.add(perf)
 
-        about = Card('About', '', 'info')
+        about    = Card('About', '', 'info')
         versions = []
         for pkg in ('PyLTSpice', 'spicelib', 'PySide6-Essentials', 'pyqtgraph', 'pandas', 'plotly'):
             try:
@@ -99,3 +119,5 @@ class SettingsPage(ScrollPage):
         from ...core.config import PROJECT_ROOT
         from .results_page import open_path
         open_path(PROJECT_ROOT)
+
+#? -------------------------------------------------------------------------------

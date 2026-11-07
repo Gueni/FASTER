@@ -1,4 +1,23 @@
-# Purpose:     Custom window chrome: modern title bar and frameless window plumbing (shared design with Flash).
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                        _______ __  __     __
+#?                       /_  __(_) /_/ /__  / /_  ____ ______
+#?                        / / / / __/ / _ \/ __ \/ __ `/ ___/
+#?                       / / / / /_/ /  __/ /_/ / /_/ / /
+#?                      /_/ /_/\__/_/\___/_.___/\__,_/_/
+#?
+#? Name:        titlebar.py
+#? Purpose:     Custom window chrome: modern title bar and frameless window plumbing (shared design with Flash).
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Dragging and edge-resizing are handed to the OS (startSystemMove / startSystemResize),
 so Windows snap layouts and Linux window managers keep working."""
 
@@ -26,7 +45,7 @@ class TitleBar(QFrame):
         self.setObjectName('TitleBar')
         self.setFixedHeight(TITLEBAR_HEIGHT)
         self._window = window
-        lay = QHBoxLayout(self)
+        lay          = QHBoxLayout(self)
         lay.setContentsMargins(14, 0, 0, 0)
         lay.setSpacing(10)
 
@@ -208,3 +227,5 @@ class WindowChrome:
             user32.SetWindowLongW(wintypes.HWND(hwnd), GWL_STYLE, style | WS_MINIMIZEBOX | WS_SYSMENU)
         except Exception:
             pass
+
+#? -------------------------------------------------------------------------------

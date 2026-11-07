@@ -1,4 +1,23 @@
-# Purpose:     Crisp, theme-coloured line icons rendered from inline SVG (no image files needed).
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                              ____
+#?                             /  _/________  ____  _____
+#?                             / // ___/ __ \/ __ \/ ___/
+#?                           _/ // /__/ /_/ / / / (__  )
+#?                          /___/\___/\____/_/ /_/____/
+#?
+#? Name:        icons.py
+#? Purpose:     Crisp, theme-coloured line icons rendered from inline SVG (no image files needed).
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Vector icons (24x24 stroke paths in the Lucide design language, ISC licence)."""
 
 from __future__ import annotations
@@ -138,3 +157,5 @@ def svg_file(name: str, color: str) -> str:
     if not path.exists():
         path.write_text(svg(name, color, 2.4), encoding='utf-8')
     return path.as_posix()
+
+#? -------------------------------------------------------------------------------

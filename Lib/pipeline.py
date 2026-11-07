@@ -166,14 +166,14 @@ def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog, simu
          image: str | os.PathLike | None, keep_sims: bool, name: str, progress: Progress) -> None:
     wca_cfg, mc_cfg = config['wca'], config['montecarlo']
     stem, out = name, result.run_dir
-    summary   = result.summary
-    run_wca   = simulate and wca_cfg.get('enabled', True) and bool(wca_cfg.get('components'))
-    run_mc    = simulate and mc_cfg.get('enabled', True) and bool(mc_cfg.get('tolerances'))
+    summary = result.summary
+    run_wca = simulate and wca_cfg.get('enabled', True) and bool(wca_cfg.get('components'))
+    run_mc  = simulate and mc_cfg.get('enabled', True) and bool(mc_cfg.get('tolerances'))
     # progress budget (percent) of the simulation steps
-    span_wca  = 30.0 if run_wca else 0.0
-    span_mc   = (65.0 - span_wca) if run_mc else 0.0
-    t0     = time.perf_counter()
-    report = Report(f'FASTER - {stem}', subtitle=str(schematic))
+    span_wca = 30.0 if run_wca else 0.0
+    span_mc  = (65.0 - span_wca) if run_mc else 0.0
+    t0       = time.perf_counter()
+    report   = Report(f'FASTER - {stem}', subtitle=str(schematic))
 
     # 1. Schematic ----------------------------------------------------------------
     progress(2, 'Reading schematic')

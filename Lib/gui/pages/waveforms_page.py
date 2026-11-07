@@ -1,4 +1,23 @@
-# Purpose:     Waveforms page: fast native plots of simulation traces and Monte Carlo runs.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?             _       __                 ____
+#?            | |     / /___ __   _____  / __/___  _________ ___  _____
+#?            | | /| / / __ `/ | / / _ \/ /_/ __ \/ ___/ __ `__ \/ ___/
+#?            | |/ |/ / /_/ /| |/ /  __/ __/ /_/ / /  / / / / / (__  )
+#?            |__/|__/\__,_/ |___/\___/_/  \____/_/  /_/ /_/ /_/____/
+#?
+#? Name:        waveforms_page.py
+#? Purpose:     Waveforms page: fast native plots of simulation traces and Monte Carlo runs.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Waveform viewer (pyqtgraph): voltages and currents on linked plots, crosshair read-out."""
 
 from __future__ import annotations
@@ -59,7 +78,7 @@ class WaveformsPage(BasePage):
         split.addWidget(side)
 
         plots = QWidget()
-        pv = QVBoxLayout(plots)
+        pv    = QVBoxLayout(plots)
         pv.setContentsMargins(0, 0, 0, 0)
         pv.setSpacing(8)
         self.readout = label('', 'Hint')
@@ -84,7 +103,7 @@ class WaveformsPage(BasePage):
         theme().changed.connect(lambda *_: self._style())
         self._style()
 
-    # -- styling -------------------------------------------------------------------------
+    #? styling                                                                            
     def _style(self) -> None:
         p = theme().palette
         for plot in (self.vplot, self.iplot):
@@ -95,7 +114,7 @@ class WaveformsPage(BasePage):
                 a.setTextPen(pg.mkPen(p.muted))
         self.vline.setPen(pg.mkPen(p.muted, width=1, style=Qt.PenStyle.DashLine))
 
-    # -- data ----------------------------------------------------------------------------
+    #? data                                                                               
     def load_run(self, raw: Path | None, mc_csv: Path | None) -> None:
         self.mc_path = mc_csv
         self.mc_check.setEnabled(mc_csv is not None)
@@ -114,8 +133,8 @@ class WaveformsPage(BasePage):
             self.ctx.toast(f'Cannot read {Path(path).name}: {exc}', 'error')
             return
         self.raw_path = Path(path)
-        ax    = axis_name(self.raw)
-        names = [n for n in self.raw.get_trace_names() if n != ax]
+        ax            = axis_name(self.raw)
+        names         = [n for n in self.raw.get_trace_names() if n != ax]
         prev  = {self.list.item(i).text() for i in range(self.list.count())
                  if self.list.item(i).checkState() == Qt.CheckState.Checked}
         default = {n for n in names if n.lower() == 'v(out)'} or set(names[:1])
@@ -147,7 +166,7 @@ class WaveformsPage(BasePage):
         if path:
             self.load_raw(Path(path))
 
-    # -- plotting ------------------------------------------------------------------------
+    #? plotting                                                                           
     def replot(self) -> None:
         for p in (self.vplot, self.iplot):
             p.clear()
@@ -165,9 +184,9 @@ class WaveformsPage(BasePage):
             plot = self.iplot if name.upper().startswith('I(') else self.vplot
             for s in steps:
                 x, y = get_wave(self.raw, name, s)
-                idx  = decimate_index([y], MAX_POINTS)
+                idx    = decimate_index([y], MAX_POINTS)
                 label_ = name if len(steps) == 1 else f'{name} step {s}'
-                pen  = pg.mkPen(COLORS[(k + s) % len(COLORS)], width=1.8)
+                pen    = pg.mkPen(COLORS[(k + s) % len(COLORS)], width=1.8)
                 plot.plot(x[idx], y[idx], pen=pen, name=label_)
                 self._curves[label_] = (x, y)
         self.iplot.setVisible(any(n.upper().startswith('I(') for n in selected))
@@ -178,9 +197,9 @@ class WaveformsPage(BasePage):
             df = pd.read_csv(self.mc_path)
         except Exception:
             return
-        x    = df['Axis'].to_numpy()
-        runs = [c for c in df.columns if c.startswith('Run_')]
-        p    = theme().palette
+        x     = df['Axis'].to_numpy()
+        runs  = [c for c in df.columns if c.startswith('Run_')]
+        p     = theme().palette
         color = pg.mkColor(p.muted)
         color.setAlpha(60)
         idx = decimate_index([df['Nominal'].to_numpy()], 3000)
@@ -199,3 +218,5 @@ class WaveformsPage(BasePage):
                 i = int(np.clip(np.searchsorted(x, xv), 0, len(x) - 1))
                 parts.append(f'{name} = {y[i]:.5g}')
         self.readout.setText('   ·   '.join(parts))
+
+#? -------------------------------------------------------------------------------

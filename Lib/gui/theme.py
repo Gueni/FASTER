@@ -1,4 +1,23 @@
-# Purpose:     Light and dark themes built from a small set of colour tokens (shared design with Flash).
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                          ________
+#?                         /_  __/ /_  ___  ____ ___  ___
+#?                          / / / __ \/ _ \/ __ `__ \/ _ \
+#?                         / / / / / /  __/ / / / / /  __/
+#?                        /_/ /_/ /_/\___/_/ /_/ /_/\___/
+#?
+#? Name:        theme.py
+#? Purpose:     Light and dark themes built from a small set of colour tokens (shared design with Flash).
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Theme manager: palette tokens, Qt stylesheet, schematic and plot colours."""
 
 from __future__ import annotations
@@ -212,6 +231,9 @@ QTableView, QTableWidget, QListWidget, QTreeWidget {{
     selection-color: {p.text};
 }}
 QTableView::item {{ padding: 4px 8px; border: none; }}
+QTableView QComboBox, QTableView QDoubleSpinBox, QTableView QSpinBox {{
+    padding: 2px 8px; min-height: 18px; border-radius: 6px; margin: 3px 4px; }}
+QTableView QComboBox {{ padding-right: 24px; }}
 QListWidget::item {{ padding: 6px 8px; border-radius: 6px; }}
 QListWidget::item:hover {{ background: {p.hover}; }}
 QListWidget::item:selected {{ background: {p.accent_soft}; color: {p.text}; }}
@@ -300,8 +322,8 @@ class ThemeManager(QObject):
         self.set_mode('light' if self.palette.name == 'dark' else 'dark')
 
     def apply(self) -> None:
-        app = QApplication.instance()
-        p   = DARK if self.mode == 'dark' or (self.mode == 'system' and self._system_is_dark()) else LIGHT
+        app          = QApplication.instance()
+        p            = DARK if self.mode == 'dark' or (self.mode == 'system' and self._system_is_dark()) else LIGHT
         self.palette = p
         self.mono    = _mono_family()
         app.setStyle('Fusion')
@@ -341,3 +363,5 @@ def theme() -> ThemeManager:
     if _theme is None:
         _theme = ThemeManager()
     return _theme
+
+#? -------------------------------------------------------------------------------

@@ -7,3 +7,5 @@ openpyxl    >= 3.1      # Excel export
 pillow      >= 10.0     # circuit image in the report (optional)
 pyfiglet    >= 1.0      # start-up banner (optional)
 rich        >= 13.0     # terminal output and log.log tables
+PySide6-Essentials >= 6.7  # desktop GUI (tested 6.12)
+pyqtgraph   >= 0.13     # GUI waveform plots

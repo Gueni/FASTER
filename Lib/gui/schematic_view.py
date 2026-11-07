@@ -1,4 +1,23 @@
-# Purpose:     Interactive schematic viewer: zoom, pan, hover and click on components.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?     _____      __                         __  _         _    ___
+#?    / ___/_____/ /_  ___  ____ ___  ____ _/ /_(_)____   | |  / (_)__ _      __
+#?    \__ \/ ___/ __ \/ _ \/ __ `__ \/ __ `/ __/ / ___/   | | / / / _ \ | /| / /
+#?   ___/ / /__/ / / /  __/ / / / / / /_/ / /_/ / /__     | |/ / /  __/ |/ |/ /
+#?  /____/\___/_/ /_/\___/_/ /_/ /_/\__,_/\__/_/\___/     |___/_/\___/|__/|__/
+#?
+#? Name:        schematic_view.py
+#? Purpose:     Interactive schematic viewer: zoom, pan, hover and click on components.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Schematic viewer.
 
 The schematic is drawn by :mod:`Lib.schematic.renderer` (theme coloured SVG)
@@ -32,7 +51,7 @@ class _HotSpot(QGraphicsRectItem):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
         self.setZValue(10)
-        self.hovered = False
+        self.hovered  = False
         self.selected = False
         self.restyle()
 
@@ -114,7 +133,7 @@ class SchematicView(QGraphicsView):
         old_transform = self.transform()
         old_center    = self.mapToScene(self.viewport().rect().center())
         same_box      = self._renderer is not None and getattr(self, '_viewbox', None) == rendering.viewbox
-        scene = self.scene()
+        scene         = self.scene()
         scene.clear()
         self._spots.clear()
         self._renderer = QSvgRenderer(QByteArray(rendering.svg.encode('utf-8')), self)
@@ -126,8 +145,8 @@ class SchematicView(QGraphicsView):
         scene.addItem(self._svg_item)
         scene.setSceneRect(QRectF(x0 - 200, y0 - 200, w + 400, h + 400))
         for name, (bx0, by0, bx1, by1) in rendering.parts.items():
-            rect = QRectF(bx0 - PAD, by0 - PAD, (bx1 - bx0) + 2 * PAD, (by1 - by0) + 2 * PAD)
-            spot = _HotSpot(self, name, rect, (tips or {}).get(name, name))
+            rect          = QRectF(bx0 - PAD, by0 - PAD, (bx1 - bx0) + 2 * PAD, (by1 - by0) + 2 * PAD)
+            spot          = _HotSpot(self, name, rect, (tips or {}).get(name, name))
             spot.selected = name == self._selected
             spot.restyle()
             scene.addItem(spot)
@@ -194,7 +213,7 @@ class SchematicPanel(QFrame):
         self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.tools = QWidget(self)
-        tl = QHBoxLayout(self.tools)
+        tl         = QHBoxLayout(self.tools)
         tl.setContentsMargins(0, 0, 0, 0)
         tl.setSpacing(6)
         for name, tip, slot in (('zoom-in', 'Zoom in', lambda: self.view.zoom(1.25)),
@@ -236,3 +255,5 @@ class SchematicPanel(QFrame):
     def resizeEvent(self, event) -> None:      # noqa: N802
         super().resizeEvent(event)
         self._place()
+
+#? -------------------------------------------------------------------------------

@@ -1,4 +1,24 @@
-# Purpose:     Persistent GUI settings (QSettings) and per-circuit analysis setups.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                       _____      __  __  _
+#?                      / ___/___  / /_/ /_(_)___  ____ ______
+#?                      \__ \/ _ \/ __/ __/ / __ \/ __ `/ ___/
+#?                     ___/ /  __/ /_/ /_/ / / / / /_/ (__  )
+#?                    /____/\___/\__/\__/_/_/ /_/\__, /____/
+#?                                              /____/
+#?
+#? Name:        settings.py
+#? Purpose:     Persistent GUI settings (QSettings) and per-circuit analysis setups.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Application settings and per-circuit state.
 
 Global preferences live in QSettings. The analysis setup of every circuit
@@ -15,8 +35,8 @@ from typing import Any
 
 from PySide6.QtCore import QSettings
 
-ORG_NAME = 'Gueni'
-APP_NAME = 'FASTER'
+ORG_NAME   = 'Gueni'
+APP_NAME   = 'FASTER'
 RECENT_MAX = 10
 
 
@@ -84,3 +104,5 @@ def load_circuit_state(path: str | Path) -> dict:
 #? -------------------------------------------------------------------------------
 def save_circuit_state(path: str | Path, state: dict) -> None:
     put(_circuit_key(path), json.dumps(state))
+
+#? -------------------------------------------------------------------------------

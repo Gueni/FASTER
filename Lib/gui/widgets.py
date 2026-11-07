@@ -1,4 +1,24 @@
-# Purpose:     Reusable building blocks: pages, cards, KPIs, tables, inputs, console, toasts.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                      _       ___     __           __
+#?                     | |     / (_)___/ /___ ____  / /______
+#?                     | | /| / / / __  / __ `/ _ \/ __/ ___/
+#?                     | |/ |/ / / /_/ / /_/ /  __/ /_(__  )
+#?                     |__/|__/_/\__,_/\__, /\___/\__/____/
+#?                                    /____/
+#?
+#? Name:        widgets.py
+#? Purpose:     Reusable building blocks: pages, cards, KPIs, tables, inputs, console, toasts.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Widgets shared by every page (design shared with Flash)."""
 
 from __future__ import annotations
@@ -93,6 +113,7 @@ def label(text: str = '', name: str = '', wrap: bool = False) -> QLabel:
     return lab
 
 
+#? -------------------------------------------------------------------------------
 #? layouts
 class FlowLayout(QLayout):
     """Lays widgets out left-to-right and wraps to new lines when space runs out."""
@@ -411,6 +432,7 @@ class PathField(QWidget):
             self.edit.setText(urls[0].toLocalFile())
 
 
+#? -------------------------------------------------------------------------------
 #? feedback
 class StatusPill(QLabel):
     def __init__(self, text: str = '', state: str = 'idle') -> None:
@@ -533,6 +555,7 @@ class Console(QPlainTextEdit):
             bar.setValue(bar.maximum())
 
 
+#? -------------------------------------------------------------------------------
 #? tables
 def _fmt(value) -> str:
     if value is None:
@@ -639,3 +662,5 @@ class DataTable(QTableView):
 
     def set_filter(self, text: str) -> None:
         self.proxy.setFilterFixedString(text)
+
+#? -------------------------------------------------------------------------------

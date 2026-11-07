@@ -1,4 +1,23 @@
-# Purpose:     Run the analysis pipeline in a separate process and stream its output to the GUI.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                       _       __           __
+#?                      | |     / /___  _____/ /_____  _____
+#?                      | | /| / / __ \/ ___/ //_/ _ \/ ___/
+#?                      | |/ |/ / /_/ / /  / ,< /  __/ /
+#?                      |__/|__/\____/_/  /_/|_|\___/_/
+#?
+#? Name:        worker.py
+#? Purpose:     Run the analysis pipeline in a separate process and stream its output to the GUI.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Analysis worker.
 
 The pipeline runs in ``python main.py <asc> --gui-worker`` so the interface
@@ -54,10 +73,10 @@ def classify(text: str) -> str:
 
 #? -------------------------------------------------------------------------------
 class AnalysisWorker(QObject):
-    line        = Signal(str, str)          # text, kind
-    progress    = Signal(float, str)        # percent (-1 = indeterminate), step
-    started     = Signal(str)               # title
-    finished    = Signal(int, str, float)   # exit code (-2 = stopped), run folder, seconds
+    line         = Signal(str, str)          # text, kind
+    progress     = Signal(float, str)        # percent (-1 = indeterminate), step
+    started      = Signal(str)               # title
+    finished     = Signal(int, str, float)   # exit code (-2 = stopped), run folder, seconds
     busy_changed = Signal(bool)
 
     def __init__(self, parent: QObject | None = None) -> None:
@@ -124,14 +143,14 @@ class AnalysisWorker(QObject):
         if self._proc is None:
             return
         self._stopped = True
-        pid = int(self._proc.processId() or 0)
+        pid           = int(self._proc.processId() or 0)
         if sys.platform == 'win32' and pid:
             subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True,
                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         else:
             self._proc.kill()
 
-    # -- process I/O -------------------------------------------------------------------
+    #? process I/O                                                                      
     def _on_output(self) -> None:
         if self._proc is None:
             return
@@ -183,3 +202,5 @@ class AnalysisWorker(QObject):
                 pass
         self.busy_changed.emit(False)
         self.finished.emit(code, self._run_dir, time.monotonic() - self._t0)
+
+#? -------------------------------------------------------------------------------

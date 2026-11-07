@@ -1,4 +1,24 @@
-# Purpose:     History page: every previous analysis run with its verdict; reopen, open report or delete.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                          __  ___      __
+#?                         / / / (_)____/ /_____  _______  __
+#?                        / /_/ / / ___/ __/ __ \/ ___/ / / /
+#?                       / __  / (__  ) /_/ /_/ / /  / /_/ /
+#?                      /_/ /_/_/____/\__/\____/_/   \__, /
+#?                                                  /____/
+#?
+#? Name:        history_page.py
+#? Purpose:     History page: every previous analysis run with its verdict; reopen, open report or delete.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Run history (scans the output folder for run folders)."""
 
 from __future__ import annotations
@@ -41,8 +61,8 @@ def scan_runs(root: Path) -> pd.DataFrame:
                 'ASIL': iso.get('asil', ''),
                 'SPFM (%)': round(100 * m['SPFM'], 2) if m.get('SPFM') is not None else None,
                 'LFM (%)': round(100 * m['LFM'], 2) if m.get('LFM') is not None else None,
-                'PMHF (FIT)': m.get('PMHF'),
-                'System FIT': fta.get('Total FIT'),
+                'PMHF (FIT)': round(m['PMHF'], 3) if m.get('PMHF') is not None else None,
+                'System FIT': round(fta['Total FIT'], 2) if fta.get('Total FIT') is not None else None,
                 'WCA': 'yes' if s.get('wca') else '',
                 'Monte Carlo': (s.get('montecarlo') or {}).get('runs', ''),
                 'Time (s)': s.get('seconds'),
@@ -63,8 +83,8 @@ class HistoryPage(BasePage):
         super().__init__(ctx, parent)
         outer = QVBoxLayout(self)
         outer.setContentsMargins(16, 14, 16, 16)
-        card = Card('Runs', '', 'history', expand=True)
-        self.card = card
+        card        = Card('Runs', '', 'history', expand=True)
+        self.card   = card
         self.filter = QLineEdit()
         self.filter.setPlaceholderText('Filter by circuit, date, verdict…')
         self.filter.setClearButtonEnabled(True)
@@ -122,3 +142,5 @@ class HistoryPage(BasePage):
             shutil.rmtree(folder, ignore_errors=True)
             self.refresh()
             self.ctx.toast('Run deleted', 'info', 2000)
+
+#? -------------------------------------------------------------------------------

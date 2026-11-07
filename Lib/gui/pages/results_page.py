@@ -1,4 +1,23 @@
-# Purpose:     Results page: KPIs with PASS / FAIL, every result table, output files and the run log.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                          ____                  ____
+#?                         / __ \___  _______  __/ / /______
+#?                        / /_/ / _ \/ ___/ / / / / __/ ___/
+#?                       / _, _/  __(__  ) /_/ / / /_(__  )
+#?                      /_/ |_|\___/____/\__,_/_/\__/____/
+#?
+#? Name:        results_page.py
+#? Purpose:     Results page: KPIs with PASS / FAIL, every result table, output files and the run log.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Results of one analysis run (read from its run folder)."""
 
 from __future__ import annotations
@@ -66,7 +85,7 @@ class ResultsPage(BasePage):
         self.stack = QStackedLayout(self)
 
         empty = QWidget()
-        el = QVBoxLayout(empty)
+        el    = QVBoxLayout(empty)
         el.addStretch(1)
         msg = label('No results yet.\nRun an analysis, or open a previous run from History.', 'Empty')
         msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -75,10 +94,10 @@ class ResultsPage(BasePage):
         self.stack.addWidget(empty)
 
         body = QWidget()
-        v = QVBoxLayout(body)
+        v    = QVBoxLayout(body)
         v.setContentsMargins(16, 14, 16, 16)
         v.setSpacing(12)
-        self.head = Card('', '', 'chart')
+        self.head       = Card('', '', 'chart')
         self.report_btn = button('Open report', 'report', 'primary', slot=self._open_report)
         self.folder_btn = button('Open folder', 'folder', slot=lambda: self.run_dir and open_path(self.run_dir))
         self.wave_btn   = button('Waveforms', 'activity', slot=lambda: self.ctx.show_page('Waveforms'))
@@ -106,7 +125,7 @@ class ResultsPage(BasePage):
         v.addWidget(self.tabs, 1)
         self.stack.addWidget(body)
 
-    # -- loading -------------------------------------------------------------------------
+    #? loading                                                                            
     def load(self, run_dir: str | Path) -> bool:
         run_dir = Path(run_dir)
         if not run_dir.is_dir():
@@ -116,7 +135,7 @@ class ResultsPage(BasePage):
             self.summary = json.loads((run_dir / 'summary.json').read_text(encoding='utf-8'))
         except (OSError, ValueError):
             self.summary = {'circuit': run_dir.name, 'outputs': {}}
-        s = self.summary
+        s       = self.summary
         started = s.get('started', '')
         try:
             started = datetime.fromisoformat(started).strftime('%d %b %Y  %H:%M')
@@ -140,10 +159,10 @@ class ResultsPage(BasePage):
         return None
 
     def _fill_kpis(self) -> None:
-        s   = self.summary
-        iso = s.get('iso26262') or {}
-        m   = iso.get('metrics') or {}
-        res = {r.get('Metric'): r.get('Result') for r in iso.get('table', [])}
+        s     = self.summary
+        iso   = s.get('iso26262') or {}
+        m     = iso.get('metrics') or {}
+        res   = {r.get('Metric'): r.get('Result') for r in iso.get('table', [])}
         state = lambda key: {'PASS': 'pass', 'FAIL': 'fail'}.get(res.get(key), '')     # noqa: E731
         if iso:
             self.kpis['Verdict'].set('PASS' if iso.get('passed') else 'FAIL', f"Target ASIL {iso.get('asil')}",
@@ -165,7 +184,7 @@ class ResultsPage(BasePage):
                                         f"{worst.get('Output')} · {worst.get('Worst Case Values')}")
         else:
             self.kpis['Worst case'].set('-', 'not run')
-        mc = s.get('montecarlo') or {}
+        mc   = s.get('montecarlo') or {}
         peak = next((r for r in mc.get('table', []) if r.get('Metric') == 'Peak'), None)
         if peak:
             self.kpis['Monte Carlo'].set(f"{_num(peak.get('mean'))} ± {_num(peak.get('std'), '{:.2g}')}",
@@ -207,7 +226,7 @@ class ResultsPage(BasePage):
         log = self.run_dir / 'log.log'
         self.log_view.setPlainText(log.read_text(encoding='utf-8', errors='replace') if log.exists() else '')
 
-    # -- actions -------------------------------------------------------------------------
+    #? actions                                                                            
     def _open_report(self) -> None:
         report = self._output('report')
         if report:
@@ -216,7 +235,7 @@ class ResultsPage(BasePage):
             self.ctx.toast('This run has no HTML report.', 'warning')
 
     def _open_file(self, index) -> None:
-        src = self.files.table.proxy.mapToSource(index)
+        src  = self.files.table.proxy.mapToSource(index)
         name = self.files.table.model_.frame().iloc[src.row()]['File']
         open_path(self.run_dir / name)
 
@@ -225,3 +244,5 @@ class ResultsPage(BasePage):
 
     def mc_waveforms(self) -> Path | None:
         return self._output('montecarlo_waveforms') if self.run_dir else None
+
+#? -------------------------------------------------------------------------------

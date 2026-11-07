@@ -1,4 +1,24 @@
-# Purpose:     Library page: browse failure modes and FIT rates, override base FIT values.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                         __    _ __
+#?                        / /   (_) /_  _________ ________  __
+#?                       / /   / / __ \/ ___/ __ `/ ___/ / / /
+#?                      / /___/ / /_/ / /  / /_/ / /  / /_/ /
+#?                     /_____/_/_.___/_/   \__,_/_/   \__, /
+#?                                                   /____/
+#?
+#? Name:        library_page.py
+#? Purpose:     Library page: browse failure modes and FIT rates, override base FIT values.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Reliability knowledge base browser with FIT overrides."""
 
 from __future__ import annotations
@@ -72,7 +92,7 @@ class LibraryPage(BasePage):
         top.add(row(button('Clear overrides', 'undo', slot=self._clear), None, stretch=[0, 1]))
         split.addWidget(top)
 
-        bottom = Card('Failure modes', '', 'alert', expand=True)
+        bottom     = Card('Failure modes', '', 'alert', expand=True)
         self.modes = DataTable()
         bottom.add(self.modes, 1)
         self.modes_card = bottom
@@ -82,7 +102,7 @@ class LibraryPage(BasePage):
         self.table.selectRow(0)
         self.refresh_profile()
 
-    # -- overrides -----------------------------------------------------------------------
+    #? overrides                                                                          
     @staticmethod
     def _load_overrides() -> dict[str, float]:
         try:
@@ -105,7 +125,7 @@ class LibraryPage(BasePage):
     def fit_overrides(self) -> dict[str, float]:
         return dict(self.overrides)
 
-    # -- display -------------------------------------------------------------------------
+    #? display                                                                            
     def refresh_profile(self) -> None:
         page = getattr(self.ctx, 'analysis_page', None)
         temp = page.temperature.value() if page else 40.0
@@ -128,3 +148,5 @@ class LibraryPage(BasePage):
         self.modes_card.set_subtitle(f'{entry.description}  ·  source: {entry.source}')
         self.modes.set_frame(pd.DataFrame([{'Failure mode': m.name, 'Distribution (%)': m.distribution,
                                             'Mechanism': m.mechanism, 'Effect': m.effect} for m in entry.modes]))
+
+#? -------------------------------------------------------------------------------

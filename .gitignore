@@ -10,3 +10,6 @@ data/*/
 # LTspice side files
 *.net
 *.fail
+
+# GUI working copies of edited schematics
+~*.faster.asc

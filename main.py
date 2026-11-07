@@ -1,4 +1,24 @@
-# Purpose:     Entry point of FASTER: desktop GUI, or command line analysis.
+#!/usr/bin/env python
+# coding=utf-8
+
+#? -------------------------------------------------------------------------------
+#?                         _________   _____________________
+#?                        / ____/   | / ___/_  __/ ____/ __ \
+#?                       / /_  / /| | \__ \ / / / __/ / /_/ /
+#?                      / __/ / ___ |___/ // / / /___/ _, _/
+#?                     /_/   /_/  |_/____//_/ /_____/_/ |_|
+#?
+#? Name:        main.py
+#? Purpose:     Entry point of FASTER: desktop GUI, or command line analysis.
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Updated:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Usage examples::
 
     python main.py                          # desktop GUI
@@ -120,3 +140,5 @@ def main(argv=None) -> int:
 
 if __name__ == '__main__':
     sys.exit(main())
+
+#? -------------------------------------------------------------------------------
