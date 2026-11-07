@@ -1,0 +1,53 @@
+{
+    "ltspice_path": null,
+    "parallel_sims": 4,
+    "sim_timeout": 600,
+
+    "reliability": {
+        "temperature_c": 55,
+        "environment": "GM",
+        "fit_overrides": {}
+    },
+
+    "iso26262": {
+        "target_asil": "B",
+        "not_safety_related": [],
+        "safe_fraction": {
+            "resistor": { "drift high": 0.5, "drift low": 0.5 }
+        },
+        "diagnostic_coverage": {
+            "Vin": { "*": "high" },
+            "resistor": { "open circuit": "medium", "short circuit": "medium" }
+        },
+        "latent_coverage": {
+            "*": { "*": 0.9 }
+        }
+    },
+
+    "fta": {
+        "mission_hours": 8000
+    },
+
+    "wca": {
+        "enabled": true,
+        "analysis_type": "passive",
+        "components": {
+            "R1": 12,
+            "R2": 1
+        },
+        "output_variables": ["V(out)", "I(R1)"],
+        "max_corner_components": 8
+    },
+
+    "montecarlo": {
+        "enabled": true,
+        "runs": 50,
+        "distribution": "uniform",
+        "seed": 42,
+        "output_variable": "V(out)",
+        "tolerances": {
+            "R1": 5,
+            "R2": 10
+        }
+    }
+}

@@ -1,5 +1,12 @@
+__pycache__/
+*.py[cod]
+.vscode/
+.venv/
+venv/
 
+# Analysis runs (data/<circuit>_<timestamp>/)
+data/*/
 
-*/__pycache__
-
-*.vscode/
+# LTspice side files
+*.net
+*.fail

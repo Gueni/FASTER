@@ -1,13 +1,24 @@
 #!/usr/bin/env python
 # coding=utf-8
-# -------------------------------------------------------------------------------
-# Name:        wca.py
-# Purpose:     Worst-Case Analysis (extreme value / corner analysis).
-#
-# Author:      Mohamed Gueni (mohamedgueni@outlook.com)
-# Created:     09/01/2024
-# Licence:     Refer to the LICENSE file
-# -------------------------------------------------------------------------------
+
+#? -------------------------------------------------------------------------------
+#?                               _       ___________
+#?                              | |     / / ____/   |
+#?                              | | /| / / /   / /| |
+#?                              | |/ |/ / /___/ ___ |
+#?                              |__/|__/\____/_/  |_|
+#?
+#? Name:        wca.py
+#? Purpose:     Worst-Case Analysis (extreme value / corner analysis).
+#?
+#? Author:      Mohamed Gueni ( mohamedgueni@outlook.com)
+#?
+#? Created:     09/01/2024
+#? Updated:     07/11/2026
+#? Licence:     Refer to the LICENSE file
+#? -------------------------------------------------------------------------------
+#? -------------------------------------------------------------------------------
+
 """Worst-case analysis.
 
 Every toleranced component is set to its minimum and maximum value. With up
@@ -28,12 +39,13 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-from .simulation import SimJob, Simulator, parse_value
-from .waveforms import align, get_wave, open_raw
+from ..simulation.runner import SimJob, Simulator, parse_value
+from ..simulation.waveforms import align, decimate_index, get_wave, open_raw
 
 log = logging.getLogger(__name__)
 
 
+#? -------------------------------------------------------------------------------
 @dataclass
 class Tolerance:
     component       : str
@@ -52,6 +64,7 @@ class Tolerance:
         return self.nominal - delta, self.nominal + delta
 
 
+#? -------------------------------------------------------------------------------
 def parse_tolerances(spec: dict, simulator: Simulator, default_type: str = 'passive') -> list[Tolerance]:
     """Accept ``{"R1": 5}`` or ``{"R1": {"tolerance": 5, "nominal": 1e3, "analysis_type": "passive"}}``."""
     out = []
@@ -65,10 +78,12 @@ def parse_tolerances(spec: dict, simulator: Simulator, default_type: str = 'pass
     return out
 
 
+#? -------------------------------------------------------------------------------
 def _describe(values: dict[str, float]) -> str:
     return ', '.join(f'{k}={v:.4g}' for k, v in values.items())
 
 
+#? -------------------------------------------------------------------------------
 @dataclass
 class WCAResult:
     tolerances  : list[Tolerance]
@@ -81,47 +96,55 @@ class WCAResult:
         figs = []
         for var, w in self.waves.items():
             fig = go.Figure()
-            fig.add_trace(go.Scattergl(x=w['x'], y=w['high'], mode='lines', line=dict(width=0),
-                                       showlegend=False, hoverinfo='skip'))
-            fig.add_trace(go.Scattergl(x=w['x'], y=w['low'], mode='lines', line=dict(width=0),
-                                       fill='tonexty', fillcolor='rgba(99,110,250,0.2)', name='WC envelope'))
-            fig.add_trace(go.Scattergl(x=w['x'], y=w['nominal'], mode='lines', name='nominal'))
-            fig.add_trace(go.Scattergl(x=w['x'], y=w['worst'], mode='lines', line=dict(dash='dash'),
-                                       name=f"worst: {w['worst_label']}"))
+            i   = decimate_index([w['high'], w['low'], w['nominal'], w['worst']], 4000)
+            x   = w['x'][i]
+            fig.add_trace(go.Scatter(x=x, y=w['high'][i], mode='lines', line=dict(width=0),
+                                     showlegend=False, hoverinfo='skip'))
+            fig.add_trace(go.Scatter(x=x, y=w['low'][i], mode='lines', line=dict(width=0),
+                                     fill='tonexty', fillcolor='rgba(99,110,250,0.2)', name='WC envelope'))
+            fig.add_trace(go.Scatter(x=x, y=w['nominal'][i], mode='lines', name='nominal'))
+            fig.add_trace(go.Scatter(x=x, y=w['worst'][i], mode='lines', line=dict(dash='dash'),
+                                     name=f"worst: {w['worst_label']}"))
             fig.update_layout(title=f'Worst-case analysis - {var}', template='plotly_white', height=400,
                               xaxis_title='Time (s)', yaxis_title=var, margin=dict(t=50, b=40))
             figs.append(fig)
         return figs
 
+    def tolerance_table(self) -> pd.DataFrame:
+        return pd.DataFrame([{'Component': t.component, 'Nominal': t.nominal, 'Tolerance': t.tolerance,
+                              'Type': t.analysis_type, 'Min': t.limits[0], 'Max': t.limits[1]}
+                             for t in self.tolerances])
+
+    def case_table(self) -> pd.DataFrame:
+        cases = pd.DataFrame.from_dict(self.cases, orient='index')
+        cases['Simulated'] = [self.raw_files.get(c) is not None for c in cases.index]
+        return cases.rename_axis('Case').reset_index()
+
     def save(self, path: str | os.PathLike) -> Path:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        cases = pd.DataFrame.from_dict(self.cases, orient='index')
-        cases['Simulated'] = [self.raw_files.get(c) is not None for c in cases.index]
-        tol = pd.DataFrame([{'Component': t.component, 'Nominal': t.nominal, 'Tolerance': t.tolerance,
-                             'Type': t.analysis_type, 'Min': t.limits[0], 'Max': t.limits[1]}
-                            for t in self.tolerances])
         with pd.ExcelWriter(path) as writer:
             self.summary.to_excel(writer, sheet_name='Summary', index=False)
-            tol.to_excel(writer, sheet_name='Tolerances', index=False)
-            cases.to_excel(writer, sheet_name='Cases', index_label='Case')
+            self.tolerance_table().to_excel(writer, sheet_name='Tolerances', index=False)
+            self.case_table().to_excel(writer, sheet_name='Cases', index=False)
         log.info('WCA saved to %s', path)
         return path
 
 
+#? -------------------------------------------------------------------------------
 class WorstCaseAnalysis:
     def __init__(self, simulator: Simulator, tolerances: list[Tolerance],
                  output_variables: list[str], max_corner_components: int = 8):
         if not tolerances:
             raise ValueError('WCA needs at least one toleranced component')
-        self.sim = simulator
-        self.tolerances = tolerances
-        self.output_variables = list(output_variables)
+        self.sim                   = simulator
+        self.tolerances            = tolerances
+        self.output_variables      = list(output_variables)
         self.max_corner_components = max_corner_components
 
     def build_cases(self) -> dict[str, dict[str, float]]:
         nominal = {t.component: t.nominal for t in self.tolerances}
-        cases = {'wca_nominal': nominal}
+        cases   = {'wca_nominal': nominal}
         if len(self.tolerances) <= self.max_corner_components:
             for i, combo in enumerate(itertools.product(*(t.limits for t in self.tolerances))):
                 cases[f'wca_corner_{i:03d}'] = dict(zip(nominal, combo))
@@ -152,10 +175,10 @@ class WorstCaseAnalysis:
                 labels.append(name)
             if not stack:
                 raise RuntimeError('All WCA corner simulations failed')
-            stack = np.vstack(stack)
-            deviation = np.max(np.abs(stack - nom), axis=1)
-            worst = int(np.argmax(deviation))
-            nom_peak = float(np.max(np.abs(nom)))
+            stack       = np.vstack(stack)
+            deviation   = np.max(np.abs(stack - nom), axis=1)
+            worst       = int(np.argmax(deviation))
+            nom_peak    = float(np.max(np.abs(nom)))
             worst_label = _describe(cases[labels[worst]])
             rows.append({
                 'Output'            : var,
@@ -172,3 +195,5 @@ class WorstCaseAnalysis:
             log.info('WCA %s: worst deviation %.4g (%.2f %%) at %s', var, deviation[worst],
                      rows[-1]['Deviation (%)'], worst_label)
         return WCAResult(self.tolerances, cases, pd.DataFrame(rows), waves, raws)
+
+#? -------------------------------------------------------------------------------

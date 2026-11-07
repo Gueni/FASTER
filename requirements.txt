@@ -1,6 +1,9 @@
-PyLTSpice                       == 5.3.1
-matplotlib                      == 3.9.2
-numpy                           == 2.0.1
-pandas                          == 2.2.2
-pyfiglet                        == 1.0.2
-screeninfo                      == 0.8.1
+# Tested with Python 3.14
+PyLTSpice   >= 5.3.1    # LTspice editing, running, .raw reading (tested 6.0.1)
+numpy       >= 2.0
+pandas      >= 2.2
+plotly      >= 5.20
+openpyxl    >= 3.1      # Excel export
+pillow      >= 10.0     # circuit image in the report (optional)
+pyfiglet    >= 1.0      # start-up banner (optional)
+rich        >= 13.0     # terminal output and log.log tables
