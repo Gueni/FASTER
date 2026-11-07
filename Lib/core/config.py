@@ -32,10 +32,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-PROJECT_ROOT   = Path(__file__).resolve().parents[2]
-DATA_DIR       = PROJECT_ROOT / 'data'
-DEFAULT_CONFIG = PROJECT_ROOT / 'config.json'
-TEST_CIRCUIT   = PROJECT_ROOT / 'tests' / 'Test.asc'
+from .paths import APP_DIR, TEMPLATE_CFG, results_dir, user_config
+
+PROJECT_ROOT   = APP_DIR                # install / source folder (read-only)
+DEFAULT_CONFIG = TEMPLATE_CFG           # bundled defaults; <data folder>/config.json wins
 
 # Default analysis settings, overridden by config.json
 DEFAULTS: dict[str, Any] = {
@@ -132,14 +132,22 @@ def _upgrade_legacy(cfg: dict) -> dict:
 
 
 #? -------------------------------------------------------------------------------
+def default_config_file() -> Path:
+    """``<data folder>/config.json`` if it exists, else the bundled defaults."""
+    own = user_config()
+    return own if own.is_file() else DEFAULT_CONFIG
+
+
+#? -------------------------------------------------------------------------------
 def load_config(path: str | os.PathLike | None = None) -> dict[str, Any]:
     """Load a JSON configuration merged over :data:`DEFAULTS`."""
-    path = Path(path) if path else DEFAULT_CONFIG
+    explicit = path is not None
+    path     = Path(path) if explicit else default_config_file()
     user: dict[str, Any] = {}
     if path.is_file():
-        with open(path, encoding='utf-8') as fh:
+        with open(path, encoding='utf-8-sig') as fh:
             user = _upgrade_legacy(json.load(fh))
-    elif path != DEFAULT_CONFIG:
+    elif explicit:
         raise FileNotFoundError(f'Config file not found: {path}')
     return _deep_merge(DEFAULTS, user)
 
@@ -147,7 +155,7 @@ def load_config(path: str | os.PathLike | None = None) -> dict[str, Any]:
 #? -------------------------------------------------------------------------------
 def new_run_dir(name: str, base: str | os.PathLike | None = None) -> Path:
     """Create ``<base>/<name>_<timestamp>`` and return it."""
-    base    = Path(base) if base else DATA_DIR
+    base    = Path(base) if base else results_dir()
     run_dir = base / f"{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir

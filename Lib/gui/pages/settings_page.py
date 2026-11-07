@@ -27,12 +27,15 @@ import os
 import platform
 from importlib import metadata
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QCheckBox, QSpinBox
 
-from ...core.config import DATA_DIR, find_ltspice
+from ...core.config import find_ltspice
+from ...core.paths import APP_DIR, data_dir, ensure_data_dir, results_dir, user_config
 from .. import settings
 from ..theme import theme
 from ..widgets import Card, PathField, ScrollPage, button, combo, field, label, row
+from .results_page import open_path
 
 
 #? -------------------------------------------------------------------------------
@@ -58,11 +61,16 @@ class SettingsPage(ScrollPage):
         lt.add(self.detected)
         self.grid.add(lt)
 
-        out         = Card('Results', 'Every run creates a time-stamped folder here.', 'folder')
-        self.output = PathField(str(DATA_DIR), directory=True, caption='Output folder')
-        self.output.setText(settings.get('run/output', ''))
-        self.output.changed.connect(lambda t: (settings.put('run/output', t), self.ctx.history_page.refresh()))
-        out.add(field('Output folder', self.output))
+        out = Card('Data folder', 'Results, examples and config.json. Never inside the application folder.',
+                   'folder')
+        self.data_label = label('', wrap=True)
+        self.data_label.setTextInteractionFlags(self.data_label.textInteractionFlags()
+                                                | Qt.TextInteractionFlag.TextSelectableByMouse)
+        out.add(self.data_label)
+        out.add(row(button('Change…', 'folder', 'primary', slot=self._change_data),
+                    button('Open', 'open', slot=lambda: open_path(ensure_data_dir())),
+                    button('Edit config.json', 'file', slot=self._edit_config), None,
+                    stretch=[0, 0, 0, 1]))
         self.open_report  = QCheckBox('Open the HTML report when an analysis finishes')
         self.show_results = QCheckBox('Show the Results page when an analysis finishes')
         self.open_report.setChecked(settings.get('run/open_report', False))
@@ -97,9 +105,10 @@ class SettingsPage(ScrollPage):
                         'FMEDA, ISO 26262 hardware metrics, FTA, worst-case and Monte Carlo analysis of '
                         'LTspice circuits.', wrap=True))
         about.add(label(f'Python {platform.python_version()}  ·  ' + '  ·  '.join(versions), 'Hint', wrap=True))
-        about.add(button('Open project folder', 'folder', slot=self._project_folder))
+        about.add(label(f'Installed in {APP_DIR}', 'Hint', wrap=True))
         self.grid.add(about)
         self._detect()
+        self._show_data()
 
     def _theme(self, mode: str) -> None:
         settings.put('ui/theme', mode)
@@ -115,9 +124,25 @@ class SettingsPage(ScrollPage):
         exe = find_ltspice(self.ltspice.text() or None)
         self.detected.setText(f'Using: {exe}' if exe else 'LTspice not found - simulations will be unavailable.')
 
-    def _project_folder(self) -> None:
-        from ...core.config import PROJECT_ROOT
-        from .results_page import open_path
-        open_path(PROJECT_ROOT)
+    def _show_data(self) -> None:
+        self.data_label.setText(f'<b>{data_dir()}</b><br>Runs are saved in {results_dir()}')
+
+    def _change_data(self) -> None:
+        if self.ctx.worker.busy:
+            self.ctx.toast('Wait for the running analysis to finish.', 'warning')
+            return
+        from ..welcome import choose_data_folder
+        chosen = choose_data_folder(self.window(), first_start=False)
+        if chosen:
+            self._show_data()
+            self.ctx.history_page.refresh()
+            self.ctx.toast(f'Data folder: {chosen}', 'success', 3500)
+
+    def _edit_config(self) -> None:
+        ensure_data_dir()
+        cfg = user_config()
+        if not cfg.exists():
+            cfg.write_text('{}' + chr(10), encoding='utf-8')
+        open_path(cfg)
 
 #? -------------------------------------------------------------------------------

@@ -20,7 +20,8 @@
 
 """Analysis worker.
 
-The pipeline runs in ``python main.py <asc> --gui-worker`` so the interface
+The pipeline runs in ``python main.py <asc> --gui-worker`` (installed build:
+``FASTER.exe <asc> --gui-worker``) so the interface
 never freezes and *Stop* can kill the whole process tree (including every
 LTspice instance). The worker prints normal log lines plus markers::
 
@@ -42,7 +43,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, Signal
 
-from ..core.config import PROJECT_ROOT
+from ..core.paths import FROZEN, PROJECT_ROOT_SRC, data_dir
 
 
 #? -------------------------------------------------------------------------------
@@ -102,7 +103,9 @@ class AnalysisWorker(QObject):
         self._config_file = Path(cfg_path)
         self._cleanup     = list(cleanup or [])
 
-        args = [str(PROJECT_ROOT / 'main.py'), str(req.schematic), '--gui-worker', '-c', cfg_path]
+        root = data_dir()
+        args = [] if FROZEN else [str(PROJECT_ROOT_SRC / 'main.py')]
+        args += [str(req.schematic), '--gui-worker', '-c', cfg_path, '--data-dir', str(root)]
         if req.name:
             args += ['--name', req.name]
         if req.output_root:
@@ -122,7 +125,8 @@ class AnalysisWorker(QObject):
         env.insert('PYTHONUNBUFFERED', '1')
         env.insert('PYTHONIOENCODING', 'utf-8')
         proc.setProcessEnvironment(env)
-        proc.setWorkingDirectory(str(PROJECT_ROOT))
+        root.mkdir(parents=True, exist_ok=True)
+        proc.setWorkingDirectory(str(root))         # never the (read-only) install folder
         proc.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         proc.setProgram(sys.executable)
         proc.setArguments(args)

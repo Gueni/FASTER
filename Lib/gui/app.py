@@ -66,10 +66,24 @@ def run_gui(schematic: str | None = None) -> int:
     from . import settings
     from .main_window import MainWindow
 
-    app    = create_app()
+    from ..core import paths
+
+    app   = create_app()
+    first = not paths.data_dir_configured()
+    if first and not os.environ.get('FASTER_SMOKE_TEST'):
+        from .welcome import choose_data_folder
+        if choose_data_folder(first_start=True) is None:       # closed: keep the default
+            paths.set_data_dir(paths.DEFAULT_DATA_DIR)
+    try:
+        paths.ensure_data_dir()
+    except OSError as exc:
+        print(f'Data folder {paths.data_dir()} is not usable: {exc}', file=sys.stderr)
     window = MainWindow()
     window.show()
     target = schematic or settings.get('files/last', '')
+    if not target and first:
+        example = paths.examples_dir() / 'Test.asc'
+        target  = str(example) if example.is_file() else ''
     if target and Path(target).is_file():
         QTimer.singleShot(0, lambda: window.open_path(target))
     if os.environ.get('FASTER_SMOKE_TEST'):          # build checks: start, render, quit

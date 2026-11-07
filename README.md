@@ -19,19 +19,28 @@ modern desktop app or from the command line.
 ## Table of Contents
 
 1. [Installation](#installation)
-2. [Desktop app](#desktop-app)
-3. [Command line](#command-line)
-4. [Configuration](#configuration)
-5. [Reliability data](#reliability-data)
-6. [ISO 26262 hardware metrics](#iso-26262-hardware-metrics)
-7. [Outputs](#outputs)
-8. [Project structure](#project-structure)
-9. [Using the library](#using-the-library)
-10. [License](#license)
+2. [Data folder](#data-folder)
+3. [Desktop app](#desktop-app)
+4. [Command line](#command-line)
+5. [Configuration](#configuration)
+6. [Reliability data](#reliability-data)
+7. [ISO 26262 hardware metrics](#iso-26262-hardware-metrics)
+8. [Outputs](#outputs)
+9. [Project structure](#project-structure)
+10. [Building the installer](#building-the-installer)
+11. [Using the library](#using-the-library)
+12. [License](#license)
 
 ## Installation
 
-Requirements: Python ≥ 3.10 and [LTspice](https://www.analog.com/ltspice) (only for simulations).
+**Windows installer:** run `FASTER-<version>-setup.exe`. Python is not needed. By
+default it installs for the current user without admin rights. You can also
+choose "Install for all users". The setup asks for the [data folder](#data-folder)
+and can optionally add FASTER to *Open with* for `.asc` files and put
+`faster-cli` on the PATH. [LTspice](https://www.analog.com/ltspice) is only
+needed for simulations.
+
+**From source:** you need Python ≥ 3.10.
 
 ```bash
 git clone https://github.com/yourusername/FASTER.git
@@ -41,6 +50,26 @@ pip install -r requirements.txt
 
 LTspice is found automatically in the usual install folders. Otherwise set
 `"ltspice_path"` in `config.json` or the `FASTER_LTSPICE` environment variable.
+
+## Data folder
+
+FASTER never writes into its program folder, so it can be installed under
+*Program Files*. All your work goes into a **data folder** that you choose, by
+default `Documents\FASTER`:
+
+```
+<data folder>/
+  results/        one time-stamped folder per analysis run
+  examples/       example circuits (copied on first start)
+  config.json     default analysis settings, edit to change the defaults
+  work/           only if needed: working copies of edited circuits from read-only folders
+```
+
+You choose it in the installer or on the first start of the app, and you can
+change it any time in **Settings → Data folder** (existing results are not
+moved). The choice is stored in `%APPDATA%\FASTER\preferences.json` and shared by
+the app and the command line. Override it per run with `--data-dir DIR` or the
+`FASTER_DATA` environment variable. Uninstalling FASTER keeps the data folder.
 
 ## Desktop app
 
@@ -89,15 +118,16 @@ touching the schematic file.
 ## Command line
 
 ```bash
-python main.py tests/Test.asc                   # full analysis
+python main.py tests/Test.asc                   # full analysis (installed: faster-cli Test.asc)
 python main.py circuit.asc --no-sim             # FMEDA + FTA only (no LTspice needed)
 python main.py circuit.asc --mc-runs 500 --open # more Monte Carlo runs, open the report
 ```
 
 | Option | Description |
 |---|---|
-| `-c, --config FILE` | configuration file (default `config.json`) |
-| `-o, --output DIR` | output root (default `data/`) |
+| `-c, --config FILE` | configuration file (default `config.json` of the data folder) |
+| `-o, --output DIR` | output root (default `<data folder>/results`) |
+| `--data-dir DIR` | data folder for this run (default: the one chosen in the app) |
 | `--name NAME` | circuit name used for the run folder and output files |
 | `--image FILE` | use this picture instead of the automatic schematic export |
 | `--mc-runs N` | override the Monte Carlo run count |
@@ -195,7 +225,7 @@ every dangerous fault is a single-point fault (SPFM = 0 %).
 
 ## Outputs
 
-Each run creates `data/<circuit>_<timestamp>/`:
+Each run creates `<data folder>/results/<circuit>_<timestamp>/`:
 
 | File | Content |
 |---|---|
@@ -214,10 +244,10 @@ Each run creates `data/<circuit>_<timestamp>/`:
 ## Project structure
 
 ```
-main.py                 command line entry point
-config.json             analysis settings
+main.py                 entry point (GUI, command line, analysis worker)
+config.json             default analysis settings (copied to the data folder)
 Lib/
-  core/                 config.py (paths, LTspice discovery, config) · cleanup.py · banner.py
+  core/                 paths.py (install / data folders) · config.py (LTspice discovery, config) · cleanup.py · banner.py
   knowledge/            components.py (type detection) · failures.py · fit_rates.py
   schematic/            asc_parser.py · asc_writer.py (edit values / directives) · symbols.py (.asy library) · renderer.py (SVG export)
   simulation/           runner.py (LTspice runner, sweeps) · waveforms.py (.raw helpers, plots)
@@ -225,12 +255,12 @@ Lib/
   reporting/            report.py (HTML report) · runlog.py (log.log with rich tables)
   gui/                  app.py · main_window.py · theme.py · icons.py · titlebar.py · widgets.py
                         session.py (open circuit, edits) · worker.py (analysis process)
-                        schematic_view.py · settings.py
+                        schematic_view.py · settings.py · welcome.py (data folder dialog)
     pages/              circuit · analysis · results · waveforms · library · history · settings
   pipeline.py           full analysis flow
 tests/                  example circuit (Test.asc + simulation results)
 docs/img/               screenshots
-data/                   analysis results
+packaging/              faster.spec (PyInstaller) · installer.iss (Inno Setup) · build.py · make_icon.py
 ```
 
 To add a component type, add its failure modes to `Lib/knowledge/failures.py`, its
@@ -240,6 +270,25 @@ FIT rates to `Lib/knowledge/fit_rates.py` and its symbol / designator to
 Code style: every module starts with the `#?` header (slant figlet of the module
 name, Name / Purpose / Author / Created / Licence), top-level blocks are separated
 by `#? ---` lines and assignment blocks are column-aligned.
+
+## Building the installer
+
+```bash
+pip install pyinstaller
+python packaging/build.py            # icon -> dist/FASTER -> smoke test -> installer
+python packaging/build.py --no-installer
+```
+
+- `dist/FASTER/` is the portable program folder. It contains `FASTER.exe`
+  (desktop app, no console) and `faster-cli.exe` (command line), which share
+  one runtime.
+- `dist/installer/FASTER-<version>-setup.exe` is the installer, built with
+  [Inno Setup 6](https://jrsoftware.org/isdl.php). Inno Setup is found on
+  PATH, through `ISCC`, or in its default install folder.
+
+The version comes from `Lib/__init__.py`. The smoke test runs the built
+`faster-cli.exe` on the example circuit in a temporary data folder. It checks
+that a report is written and that nothing lands in the program folder.
 
 ## Schematic image
 

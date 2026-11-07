@@ -33,6 +33,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal
 
+from ..core.paths import is_writable, work_dir
 from ..schematic.asc_parser import parse_ltspice_file
 from ..schematic.asc_writer import AscDocument
 from ..schematic.renderer import Rendering, render
@@ -156,7 +157,10 @@ class CircuitSession(QObject):
         """``(schematic to analyse, circuit name, files to delete afterwards)``."""
         if not self.modified:
             return self.doc.path, self.name, []
-        work = self.doc.path.with_name(f'~{self.name}.faster.asc')
+        folder = self.doc.path.parent
+        if not is_writable(folder):     # e.g. an example under Program Files
+            folder = work_dir()
+        work = folder / f'~{self.name}.faster.asc'
         self.doc.save(work)             # saving to another path keeps doc.path on the original
         return work, self.name, [work]
 

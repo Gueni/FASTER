@@ -26,12 +26,17 @@
     python main.py circuit.asc --config my.json --mc-runs 200 --keep-sims
     python main.py circuit.asc --no-sim     # FMEDA + FTA only, no LTspice needed
     python main.py --gui circuit.asc        # GUI with a circuit already open
+
+Installed build: ``FASTER.exe`` is the GUI, ``faster-cli.exe`` the command line.
+Results go to the data folder chosen by the user (see :mod:`Lib.core.paths`).
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import multiprocessing
+import os
 import sys
 from pathlib import Path
 
@@ -43,8 +48,9 @@ def parse_args(argv=None) -> argparse.Namespace:
     from Lib.core import config as cfg
     p = argparse.ArgumentParser(description='FASTER - reliability analysis of LTspice circuits')
     p.add_argument('schematic', nargs='?', help='LTspice .asc file (no file: start the GUI)')
-    p.add_argument('-c', '--config', default=None, help=f'JSON config (default: {cfg.DEFAULT_CONFIG.name})')
-    p.add_argument('-o', '--output', default=None, help=f'output root folder (default: {cfg.DATA_DIR})')
+    p.add_argument('-c', '--config', default=None, help='JSON config (default: config.json of the data folder)')
+    p.add_argument('-o', '--output', default=None, help='output root folder (default: <data folder>/results)')
+    p.add_argument('--data-dir', default=None, help='data folder for this run (default: the one chosen in the app)')
     p.add_argument('--name', default=None, help='circuit name for the run folder and outputs (default: file name)')
     p.add_argument('--image', default=None, help='circuit image for the report (default: exported from the schematic)')
     p.add_argument('--mc-runs', type=int, default=None, help='override Monte Carlo run count')
@@ -128,13 +134,27 @@ def run_cli(args) -> int:
 
 
 #? -------------------------------------------------------------------------------
+def _fix_std_streams() -> None:
+    """A windowed exe has no console: give print / logging a sink instead of ``None``."""
+    for name in ('stdout', 'stderr'):
+        if getattr(sys, name) is None:
+            setattr(sys, name, open(os.devnull, 'w', encoding='utf-8'))
+
+
+#? -------------------------------------------------------------------------------
 def main(argv=None) -> int:
+    multiprocessing.freeze_support()
+    _fix_std_streams()
     args = parse_args(argv)
+    if args.data_dir:
+        os.environ['FASTER_DATA'] = str(Path(args.data_dir).expanduser().resolve())
     if getattr(args, WORKER_FLAG.lstrip('-').replace('-', '_')):
         return run_worker(args)
     if args.gui or not args.schematic:
         from Lib.gui.app import run_gui
         return run_gui(args.schematic)
+    from Lib.core.paths import ensure_data_dir
+    ensure_data_dir()
     return run_cli(args)
 
 

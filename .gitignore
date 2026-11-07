@@ -13,3 +13,7 @@ data/*/
 
 # GUI working copies of edited schematics
 ~*.faster.asc
+
+# Build outputs (python packaging/build.py)
+build/
+dist/

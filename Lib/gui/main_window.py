@@ -34,7 +34,8 @@ from PySide6.QtWidgets import (QApplication, QButtonGroup, QFileDialog, QFrame, 
                                QVBoxLayout, QWidget)
 
 from .. import __version__
-from ..core.config import DATA_DIR, find_ltspice
+from ..core.config import find_ltspice
+from ..core.paths import data_dir, examples_dir, results_dir
 from . import settings
 from .icons import app_icon
 from .pages.analysis_page import AnalysisPage
@@ -283,8 +284,8 @@ class MainWindow(QMainWindow):
         return box.clickedButton() is ok
 
     def output_root(self) -> Path:
-        custom = settings.get('run/output', '')
-        return Path(custom) if custom else DATA_DIR
+        """Run folders live in ``<data folder>/results``."""
+        return results_dir()
 
     def run_settings(self) -> dict:
         return {'parallel_sims': settings.get('run/parallel', max(2, (os.cpu_count() or 4) // 2)),
@@ -315,7 +316,7 @@ class MainWindow(QMainWindow):
                             danger=True, ok_text='Discard')
 
     def open_dialog(self) -> None:
-        start = str(self.session.path.parent) if self.session.path else str(Path.cwd() / 'tests')
+        start = str(self.session.path.parent) if self.session.path else str(examples_dir())
         path, _ = QFileDialog.getOpenFileName(self, 'Open LTspice schematic', start,
                                               'LTspice schematic (*.asc);;All files (*)')
         if path:

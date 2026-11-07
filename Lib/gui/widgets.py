@@ -251,13 +251,14 @@ class Card(QFrame):
         self.title_label = label(title, 'CardTitle')
         texts.addWidget(self.title_label)
         self.subtitle_label = label(subtitle, 'CardSubtitle', wrap=True)
-        self.subtitle_label.setVisible(bool(subtitle))
         texts.addWidget(self.subtitle_label)
         head.addLayout(texts, 1)
         self.header_actions = QHBoxLayout()
         self.header_actions.setSpacing(4)
         head.addLayout(self.header_actions)
         outer.addLayout(head)
+        # only now is the label a child of the card: showing a parentless widget opens a window
+        self.subtitle_label.setVisible(bool(subtitle))
         self.body = QVBoxLayout()
         self.body.setSpacing(12)
         outer.addLayout(self.body, 1 if expand else 0)
@@ -384,9 +385,10 @@ class PathField(QWidget):
     changed = Signal(str)
 
     def __init__(self, placeholder: str = 'Select…', filters: str = 'All files (*)', directory: bool = False,
-                 caption: str = 'Select') -> None:
+                 caption: str = 'Select', must_exist: bool = True) -> None:
         super().__init__()
         self._filters, self._dir, self._caption = filters, directory, caption
+        self._must_exist = must_exist
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(6)
@@ -401,7 +403,7 @@ class PathField(QWidget):
 
     def _check(self) -> None:
         t   = self.edit.text().strip()
-        bad = bool(t) and not (Path(t).is_dir() if self._dir else Path(t).is_file())
+        bad = bool(t) and self._must_exist and not (Path(t).is_dir() if self._dir else Path(t).is_file())
         if bool(self.edit.property('invalid')) != bad:
             self.edit.setProperty('invalid', bad)
             repolish(self.edit)
