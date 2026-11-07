@@ -70,7 +70,7 @@ def _finish(component: dict | None, components: list[dict]) -> None:
 
 
 #? -------------------------------------------------------------------------------
-def parse_ltspice_file(file_path: str | os.PathLike) -> dict[str, Any]:
+def parse_ltspice_file(file_path: str | os.PathLike, text: str | None = None) -> dict[str, Any]:
     """Parse an LTspice schematic file."""
     path = Path(file_path)
     components: list[dict] = []
@@ -80,7 +80,7 @@ def parse_ltspice_file(file_path: str | os.PathLike) -> dict[str, Any]:
     directives: list[str] = []
     current: dict | None = None
 
-    for line in _read_lines(path):
+    for line in (text.splitlines() if text is not None else _read_lines(path)):
         line = line.strip()
         if not line:
             continue

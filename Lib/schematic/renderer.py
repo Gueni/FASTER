@@ -78,38 +78,55 @@ class Instance:
 
 #? -------------------------------------------------------------------------------
 class _Canvas:
-    def __init__(self):
+    def __init__(self, colors: dict[str, str] | None = None):
         self.items: list[str] = []
-        self.xmin = self.ymin = math.inf
-        self.xmax = self.ymax = -math.inf
+        self.c       = {**COLORS, **(colors or {})}
+        self.xmin    = self.ymin = math.inf
+        self.xmax    = self.ymax = -math.inf
+        self.viewbox = (0.0, 0.0, 100.0, 100.0)
+        self._grp: list[float] | None = None      # bounding box of the shapes of the current part
 
     def _grow(self, x: float, y: float) -> None:
         self.xmin, self.xmax = min(self.xmin, x), max(self.xmax, x)
         self.ymin, self.ymax = min(self.ymin, y), max(self.ymax, y)
 
+    def _shape(self, x: float, y: float) -> None:
+        self._grow(x, y)
+        g = self._grp
+        if g is not None:
+            g[0], g[1], g[2], g[3] = min(g[0], x), min(g[1], y), max(g[2], x), max(g[3], y)
+
+    def begin_part(self) -> None:
+        self._grp = [math.inf, math.inf, -math.inf, -math.inf]
+
+    def end_part(self) -> tuple[float, float, float, float] | None:
+        g, self._grp = self._grp, None
+        return tuple(g) if g and g[0] != math.inf else None
+
     def line(self, x1, y1, x2, y2, color, width=2.0):
-        self._grow(x1, y1); self._grow(x2, y2)
+        self._shape(x1, y1); self._shape(x2, y2)
         self.items.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{color}" stroke-width="{width}" stroke-linecap="round"/>')
 
     def polygon(self, pts, color, width=2.0, fill='none', dash=False):
         for x, y in pts:
-            self._grow(x, y)
+            self._shape(x, y)
         d     = ' '.join(f'{x},{y}' for x, y in pts)
         extra = ' stroke-dasharray="6 4"' if dash else ''
         self.items.append(f'<polygon points="{d}" stroke="{color}" stroke-width="{width}" fill="{fill}" stroke-linejoin="round"{extra}/>')
 
     def ellipse(self, cx, cy, rx, ry, color, width=2.0, fill='none'):
-        self._grow(cx - rx, cy - ry); self._grow(cx + rx, cy + ry)
+        self._shape(cx - rx, cy - ry); self._shape(cx + rx, cy + ry)
         self.items.append(f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" stroke="{color}" stroke-width="{width}" fill="{fill}"/>')
 
     def path(self, d, color, width=2.0, bbox=()):
         for x, y in bbox:
-            self._grow(x, y)
+            self._shape(x, y)
         self.items.append(f'<path d="{d}" stroke="{color}" stroke-width="{width}" fill="none" stroke-linecap="round"/>')
 
-    def text(self, x, y, s, size_idx=2, align='Left', vertical=False, color=COLORS['text']):
+    def text(self, x, y, s, size_idx=2, align='Left', vertical=False, color=None):
         if not s:
             return
+        color  = color or self.c['text']
         fs     = FONT_BASE * FONT_SIZES[max(0, min(size_idx, len(FONT_SIZES) - 1))]
         lines  = s.split('\\n')
         anchor = {'start': 'start', 'end': 'end'}.get(align, 'middle')
@@ -139,9 +156,10 @@ class _Canvas:
             self.xmax = self.ymax = 100
         x0, y0 = self.xmin - MARGIN, self.ymin - MARGIN
         w, h = self.xmax - self.xmin + 2 * MARGIN, self.ymax - self.ymin + 2 * MARGIN
+        self.viewbox = (x0, y0, w, h)
         return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{x0:.0f} {y0:.0f} {w:.0f} {h:.0f}" '
                 f'width="{w:.0f}" height="{h:.0f}" font-family="Arial, Helvetica, sans-serif">'
-                f'<rect x="{x0:.0f}" y="{y0:.0f}" width="{w:.0f}" height="{h:.0f}" fill="{COLORS["background"]}"/>'
+                f'<rect x="{x0:.0f}" y="{y0:.0f}" width="{w:.0f}" height="{h:.0f}" fill="{self.c["background"]}"/>'
                 + ''.join(self.items) + '</svg>')
 
 
@@ -180,7 +198,8 @@ def _plain_align(align: str) -> tuple[bool, str]:
 
 #? -------------------------------------------------------------------------------
 #? drawing                                                                            
-def _draw_symbol(cv: _Canvas, inst: Instance, sym: Symbol, pin_counter: Counter) -> None:
+def _draw_symbol(cv: _Canvas, inst: Instance, sym: Symbol, pin_counter: Counter) -> tuple | None:
+    """Draw one symbol instance; return the bounding box of its graphics."""
     m = ORIENTATIONS.get(inst.orient, ORIENTATIONS['R0'])
     a, b, c, d = m
     mirrored = (a * d - b * c) < 0
@@ -188,7 +207,8 @@ def _draw_symbol(cv: _Canvas, inst: Instance, sym: Symbol, pin_counter: Counter)
     def tf(x, y):
         return inst.x + a * x + b * y, inst.y + c * x + d * y
 
-    col = COLORS['symbol']
+    col = cv.c['symbol']
+    cv.begin_part()
     for x1, y1, x2, y2 in sym.lines:
         cv.line(*tf(x1, y1), *tf(x2, y2), col)
     for x1, y1, x2, y2 in sym.rects:
@@ -221,8 +241,9 @@ def _draw_symbol(cv: _Canvas, inst: Instance, sym: Symbol, pin_counter: Counter)
 
     if not sym.found:   # unknown symbol: dashed box around its location
         cv.polygon([(inst.x - 24, inst.y - 8), (inst.x + 56, inst.y - 8), (inst.x + 56, inst.y + 104),
-                    (inst.x - 24, inst.y + 104)], COLORS['missing'], dash=True)
-        cv.text(inst.x + 16, inst.y + 48, inst.symbol.split('\\')[-1], 1, 'middle', color=COLORS['missing'])
+                    (inst.x - 24, inst.y + 104)], cv.c['missing'], dash=True)
+        cv.text(inst.x + 16, inst.y + 48, inst.symbol.split('\\')[-1], 1, 'middle', color=cv.c['missing'])
+    bbox = cv.end_part()
 
     # attribute windows: symbol defaults overridden by the schematic
     windows = {**sym.windows, **inst.windows}
@@ -235,28 +256,43 @@ def _draw_symbol(cv: _Canvas, inst: Instance, sym: Symbol, pin_counter: Counter)
             continue
         vert, al = _oriented_align(align, m)
         cv.text(*tf(wx, wy), value, size, al, vert)
+    return bbox
 
 
 #? -------------------------------------------------------------------------------
 def _draw_flag(cv: _Canvas, x: int, y: int, name: str) -> None:
-    col = COLORS['flag']
+    col = cv.c['flag']
     if name == '0':
         cv.polygon([(x - 16, y), (x + 16, y), (x, y + 16)], col)
     else:
-        cv.text(x, y - 6, name, 2, 'bottom', color=COLORS['wire'])
+        cv.text(x, y - 6, name, 2, 'bottom', color=cv.c['wire'])
 
 
 #? -------------------------------------------------------------------------------
-def render_schematic(asc_file: str | os.PathLike, out_file: str | os.PathLike | None = None) -> str:
-    """Render ``asc_file`` to SVG text; also write it to ``out_file`` if given."""
+@dataclass
+class Rendering:
+    svg     : str
+    viewbox : tuple[float, float, float, float]                 # x0, y0, width, height (schematic units)
+    parts   : dict[str, tuple[float, float, float, float]]      # instance name -> x0, y0, x1, y1
+
+
+#? -------------------------------------------------------------------------------
+def render(asc_file: str | os.PathLike, text: str | None = None,
+           colors: dict[str, str] | None = None) -> Rendering:
+    """Render a schematic and return the SVG plus the position of every part.
+
+    ``text`` renders unsaved content (symbols are still looked up next to ``asc_file``);
+    ``colors`` overrides entries of :data:`COLORS` (e.g. a dark theme).
+    """
     asc_file = Path(asc_file)
     sch_dir  = str(asc_file.parent)
-    cv       = _Canvas()
+    cv       = _Canvas(colors)
     wires, flags, texts, instances = [], [], [], []
     shapes = Symbol('schematic')       # free graphics drawn on the sheet
     current: Instance | None = None
+    lines  = text.splitlines() if text is not None else _read_lines(asc_file)
 
-    for raw in _read_lines(asc_file):
+    for raw in lines:
         line = raw.strip()
         keyword, _, rest = line.partition(' ')
         parts = rest.split()
@@ -284,31 +320,43 @@ def render_schematic(asc_file: str | os.PathLike, out_file: str | os.PathLike | 
             parse_shape_line(keyword, parts, shapes)
 
     pins: Counter = Counter()
+    parts: dict[str, tuple[float, float, float, float]] = {}
     for inst in instances:
-        _draw_symbol(cv, inst, find_symbol(inst.symbol, sch_dir), pins)
+        bbox = _draw_symbol(cv, inst, find_symbol(inst.symbol, sch_dir), pins)
+        name = inst.attrs.get('InstName')
+        if name and bbox:
+            parts[name] = bbox
     _draw_symbol(cv, Instance('schematic', 0, 0, 'R0'), shapes, Counter())
 
     ends: Counter = Counter()
     for x1, y1, x2, y2 in wires:
-        cv.line(x1, y1, x2, y2, COLORS['wire'], 2.5)
+        cv.line(x1, y1, x2, y2, cv.c['wire'], 2.5)
         ends[(x1, y1)] += 1
         ends[(x2, y2)] += 1
     for x, y, name in flags:
         _draw_flag(cv, x, y, name)
     for (x, y), n in ends.items():
         if n + pins.get((x, y), 0) >= 3:
-            cv.ellipse(x, y, 5, 5, COLORS['wire'], 1, fill=COLORS['wire'])
+            cv.ellipse(x, y, 5, 5, cv.c['wire'], 1, fill=cv.c['wire'])
 
-    for x, y, align, size, text in texts:
+    for x, y, align, size, txt in texts:
         vert, al = _plain_align(align)
-        if text.startswith('!'):
-            cv.text(x, y, text[1:], size, al, vert, COLORS['directive'])
-        elif text.startswith(';'):
-            cv.text(x, y, text[1:], size, al, vert, COLORS['comment'])
+        if txt.startswith('!'):
+            cv.text(x, y, txt[1:], size, al, vert, cv.c['directive'])
+        elif txt.startswith(';'):
+            cv.text(x, y, txt[1:], size, al, vert, cv.c['comment'])
         else:
-            cv.text(x, y, text, size, al, vert, COLORS['comment'])
+            cv.text(x, y, txt, size, al, vert, cv.c['comment'])
 
     svg = cv.svg()
+    return Rendering(svg, cv.viewbox, parts)
+
+
+#? -------------------------------------------------------------------------------
+def render_schematic(asc_file: str | os.PathLike, out_file: str | os.PathLike | None = None,
+                     colors: dict[str, str] | None = None) -> str:
+    """Render ``asc_file`` to SVG text; also write it to ``out_file`` if given."""
+    svg = render(asc_file, colors=colors).svg
     if out_file:
         Path(out_file).parent.mkdir(parents=True, exist_ok=True)
         Path(out_file).write_text(svg, encoding='utf-8')

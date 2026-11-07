@@ -155,10 +155,10 @@ class WorstCaseAnalysis:
                 cases[f'wca_{t.component}_max'] = {**nominal, t.component: hi}
         return cases
 
-    def run(self) -> WCAResult:
+    def run(self, progress=None) -> WCAResult:
         cases = self.build_cases()
         log.info('WCA: %d simulations for %s', len(cases), ', '.join(t.component for t in self.tolerances))
-        raws = self.sim.run_batch(SimJob(name, values=vals) for name, vals in cases.items())
+        raws = self.sim.run_batch((SimJob(name, values=vals) for name, vals in cases.items()), progress)
         if raws.get('wca_nominal') is None:
             raise RuntimeError('WCA nominal simulation failed')
 

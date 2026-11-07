@@ -25,11 +25,15 @@
 from __future__ import annotations
 
 import copy
+import json
 import logging
+import math
 import os
 import shutil
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -51,6 +55,8 @@ from .simulation.waveforms import trace_figures, trace_statistics
 
 log = logging.getLogger(__name__)
 
+SUMMARY_NAME = 'summary.json'
+
 
 #? -------------------------------------------------------------------------------
 @dataclass
@@ -58,24 +64,55 @@ class PipelineResult:
     run_dir : Path
     outputs : dict[str, Path] = field(default_factory=dict)
     errors  : dict[str, str] = field(default_factory=dict)
+    summary : dict = field(default_factory=dict)
+
+
+Progress = Callable[[float, str], None]       # (percent 0..100, step title)
 
 
 #? -------------------------------------------------------------------------------
-def copy_circuit(schematic: Path, out_dir: Path) -> Path:
+def _jsonable(value):
+    """Convert numpy / pandas / Path values for json.dump."""
+    if isinstance(value, dict):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, Path):
+        return str(value)
+    if hasattr(value, 'item'):
+        value = value.item()
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
+#? -------------------------------------------------------------------------------
+def write_summary(result: PipelineResult) -> Path:
+    """``summary.json``: key results of a run, read by the GUI history / results pages."""
+    path = result.run_dir / SUMMARY_NAME
+    data = {**result.summary, 'outputs': {k: Path(v).name for k, v in result.outputs.items()},
+            'errors': result.errors}
+    path.write_text(json.dumps(_jsonable(data), indent=2), encoding='utf-8')
+    return path
+
+
+#? -------------------------------------------------------------------------------
+def copy_circuit(schematic: Path, out_dir: Path, name: str | None = None) -> Path:
     """Copy the analysed schematic into the run folder (results stay traceable to the exact circuit)."""
-    target = out_dir / schematic.name
+    target = out_dir / f'{name or schematic.stem}{schematic.suffix}'
     shutil.copy2(schematic, target)
     log.info('Circuit copied to %s', target)
     return target
 
 
 #? -------------------------------------------------------------------------------
-def circuit_image(schematic: Path, out_dir: Path, override: str | os.PathLike | None = None) -> Path | None:
+def circuit_image(schematic: Path, out_dir: Path, override: str | os.PathLike | None = None,
+                  name: str | None = None) -> Path | None:
     """User image if given, otherwise export the schematic itself to SVG."""
     if override:
         return Path(override)
     try:
-        svg = out_dir / f'schematic_{schematic.stem}.svg'
+        svg = out_dir / f'schematic_{name or schematic.stem}.svg'
         render_schematic(schematic, svg)
         return svg
     except Exception:
@@ -88,8 +125,14 @@ def run_pipeline(schematic: str | os.PathLike, config: dict | None = None, *,
                  output_root: str | os.PathLike | None = None, simulate: bool = True,
                  run_wca: bool | None = None, run_mc: bool | None = None, mc_runs: int | None = None,
                  image: str | os.PathLike | None = None, keep_sims: bool = False,
-                 terminal_tables: bool = True) -> PipelineResult:
-    """Run every analysis; results, report and ``log.log`` go to a new run folder."""
+                 terminal_tables: bool = True, name: str | None = None,
+                 progress: Progress | None = None) -> PipelineResult:
+    """Run every analysis; results, report and ``log.log`` go to a new run folder.
+
+    ``name`` overrides the circuit name used for the run folder and output files
+    (the GUI analyses an edited working copy under the original name).
+    ``progress(percent, step)`` is called as the analysis advances.
+    """
     schematic = Path(schematic).resolve()
     if not schematic.is_file():
         raise FileNotFoundError(f'Schematic not found: {schematic}')
@@ -101,26 +144,41 @@ def run_pipeline(schematic: str | os.PathLike, config: dict | None = None, *,
     if mc_runs is not None:
         config['montecarlo']['runs'] = mc_runs
 
-    result = PipelineResult(cfg_mod.new_run_dir(schematic.stem, output_root))
+    name     = name or schematic.stem
+    progress = progress or (lambda pct, step: None)
+    result   = PipelineResult(cfg_mod.new_run_dir(name, output_root))
+    result.summary = {'circuit': name, 'schematic': str(schematic), 'run_dir': str(result.run_dir),
+                      'started': datetime.now().isoformat(timespec='seconds'), 'config': config}
+    t0 = time.perf_counter()
     with RunLog(result.run_dir, terminal=terminal_tables) as rl:
         rl.header(schematic, result.run_dir, config, cfg_mod.find_ltspice(config['ltspice_path']))
-        _run(schematic, config, result, rl, simulate, image, keep_sims)
+        _run(schematic, config, result, rl, simulate, image, keep_sims, name, progress)
         rl.outputs(result.outputs, result.errors)
-    result.outputs['log'] = rl.path
+    result.outputs['log']       = rl.path
+    result.summary['seconds']   = round(time.perf_counter() - t0, 2)
+    result.outputs['summary']   = write_summary(result)
+    progress(100.0, 'Done')
     return result
 
 
 #? -------------------------------------------------------------------------------
-def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog,
-         simulate: bool, image: str | os.PathLike | None, keep_sims: bool) -> None:
+def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog, simulate: bool,
+         image: str | os.PathLike | None, keep_sims: bool, name: str, progress: Progress) -> None:
     wca_cfg, mc_cfg = config['wca'], config['montecarlo']
-    stem, out = schematic.stem, result.run_dir
+    stem, out = name, result.run_dir
+    summary   = result.summary
+    run_wca   = simulate and wca_cfg.get('enabled', True) and bool(wca_cfg.get('components'))
+    run_mc    = simulate and mc_cfg.get('enabled', True) and bool(mc_cfg.get('tolerances'))
+    # progress budget (percent) of the simulation steps
+    span_wca  = 30.0 if run_wca else 0.0
+    span_mc   = (65.0 - span_wca) if run_mc else 0.0
     t0     = time.perf_counter()
     report = Report(f'FASTER - {stem}', subtitle=str(schematic))
 
     # 1. Schematic ----------------------------------------------------------------
+    progress(2, 'Reading schematic')
     rl.rule('1. Schematic')
-    result.outputs['circuit'] = copy_circuit(schematic, out)
+    result.outputs['circuit'] = copy_circuit(schematic, out, stem)
     circuit = parse_ltspice_file(schematic)
     comps   = circuit['components']
     log.info('Parsed %d components from %s', len(comps), schematic.name)
@@ -137,7 +195,9 @@ def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog,
     rl.mapping({'Components': len(comps), 'Wires': len(circuit['wires']),
                 'Nets (flags)': len(set(circuit['flags'].values()))}, 'Schematic summary')
 
-    image = circuit_image(schematic, out, image)
+    summary['components'] = len(comps)
+    progress(5, 'Exporting schematic image')
+    image = circuit_image(schematic, out, image, stem)
     if image is not None and not image.is_file():
         log.warning('Circuit image not found: %s', image)
         image = None
@@ -151,6 +211,7 @@ def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog,
                                ('SPICE directives', directives)])
 
     # 2. FMEDA --------------------------------------------------------------------
+    progress(8, 'FMEDA / ISO 26262')
     rl.rule('2. FMEDA / ISO 26262 hardware metrics')
     rel = config['reliability']
     rl.mapping({'Temperature (degC)': rel['temperature_c'],
@@ -175,6 +236,11 @@ def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog,
     rl.table(hw_summary, f'ISO 26262-5 hardware metrics - target ASIL {hw.asil}', console=True)
 
     # 3. FTA ----------------------------------------------------------------------
+    summary['iso26262'] = {'asil': hw.asil, 'passed': hw.passed,
+                           'metrics': {k: v for k, v in hw.metrics.items()},
+                           'table': hw_summary.to_dict('records')}
+    summary['failure_modes'] = len(fmeda)
+    progress(15, 'Fault tree analysis')
     rl.rule('3. Fault Tree Analysis')
     fta = analyze_fault_tree(build_fault_tree(fmeda), config['fta']['mission_hours'])
     result.outputs['fta'] = save_fta_results(fta, out / f'FTA_{stem}.xlsx')
@@ -204,49 +270,65 @@ def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog,
         'Failure modes': ov['Failure Modes'],
     }, figures=[fault_tree_figure(fta)], tables=[('Failure modes', fta_detail.drop(columns=['Impact']))])
 
+    summary['fta'] = dict(ov)
+
     # 4. Simulations --------------------------------------------------------------
     if simulate:
         sim_dir = out / 'sims'
         try:
+            progress(22, 'Nominal simulation')
             rl.rule('4. Nominal simulation')
             sim = Simulator(schematic, sim_dir, parallel=config['parallel_sims'],
                             timeout=config['sim_timeout'], ltspice_path=config['ltspice_path'])
             nominal_raw = sim.run(SimJob('nominal'))
             if nominal_raw is None:
                 raise RuntimeError('Nominal simulation failed - check the schematic and LTspice install')
-            rl.table(trace_statistics(nominal_raw), 'Nominal traces', console=True)
+            traces = trace_statistics(nominal_raw)
+            rl.table(traces, 'Nominal traces', console=True)
+            if config.get('keep_nominal_raw', True):
+                result.outputs['nominal_raw'] = Path(shutil.copy2(nominal_raw, out / f'nominal_{stem}.raw'))
+            summary['traces'] = traces.to_dict('records')
             report.add_section('Nominal simulation', figures=trace_figures(nominal_raw))
 
-            if wca_cfg.get('enabled', True) and wca_cfg.get('components'):
+            if run_wca:
+                progress(30, 'Worst-case analysis')
                 rl.rule('5. Worst-Case Analysis')
                 try:
                     tols = parse_tolerances(wca_cfg['components'], sim, wca_cfg.get('analysis_type', 'passive'))
                     wca = WorstCaseAnalysis(sim, tols, wca_cfg['output_variables'],
-                                            wca_cfg.get('max_corner_components', 8)).run()
+                                            wca_cfg.get('max_corner_components', 8)).run(
+                        progress=lambda d, n: progress(30 + span_wca * d / max(n, 1), f'Worst-case analysis {d}/{n}'))
                     result.outputs['wca'] = wca.save(out / f'WCA_{stem}.xlsx')
                     rl.table(wca.tolerance_table(), 'WCA tolerances')
                     rl.table(wca.case_table(), 'WCA cases')
                     rl.table(wca.summary, 'WCA summary', console=True)
+                    summary['wca'] = {'cases': len(wca.cases), 'table': wca.summary.to_dict('records')}
                     report.add_section('Worst-Case Analysis', text=f'{len(wca.cases)} simulations.',
                                        figures=wca.figures(), tables=[('Summary', wca.summary)])
                 except Exception as exc:  # keep the rest of the report
                     log.exception('WCA failed')
                     result.errors['wca'] = str(exc)
 
-            if mc_cfg.get('enabled', True) and mc_cfg.get('tolerances'):
+            if run_mc:
+                mc0 = 30 + span_wca
+                progress(mc0, 'Monte Carlo')
                 rl.rule('6. Monte Carlo')
                 try:
                     mcs = MonteCarloSimulation(sim, mc_cfg['tolerances'], runs=mc_cfg['runs'],
                                                distribution=mc_cfg['distribution'], seed=mc_cfg.get('seed'),
                                                output_variable=mc_cfg['output_variable'])
                     rl.table(mcs.input_table(), 'Monte Carlo inputs')
-                    mc = mcs.run()
+                    mc = mcs.run(progress=lambda d, n: progress(mc0 + span_mc * d / max(n, 1),
+                                                                f'Monte Carlo {d}/{n}'))
                     wave_csv, sample_csv = mc.save_csv(out, f'montecarlo_{stem}')
                     result.outputs['montecarlo_waveforms'] = wave_csv
                     result.outputs['montecarlo_samples'] = sample_csv
                     stats = mc.statistics().reset_index().rename(columns={'index': 'Metric'})
                     rl.table(mc.samples.rename_axis('Run').reset_index(), 'Monte Carlo runs')
                     rl.table(stats, f'Monte Carlo statistics - {mc.output_variable}', console=True)
+                    summary['montecarlo'] = {'runs': mc_cfg['runs'], 'output': mc.output_variable,
+                                             'failed': int(mc.samples['Peak'].isna().sum()),
+                                             'table': stats.to_dict('records')}
                     report.add_section('Monte Carlo', text=f"{mc_cfg['runs']} runs, {mc_cfg['distribution']} distribution.",
                                        figures=[mc.figure()], tables=[('Statistics', stats)])
                 except Exception as exc:
@@ -266,6 +348,7 @@ def _run(schematic: Path, config: dict, result: PipelineResult, rl: RunLog,
             [{'Step': k, 'Error': v} for k, v in result.errors.items()]))])
 
     # 7. Report -------------------------------------------------------------------
+    progress(97, 'Writing report')
     rl.rule('7. Report')
     result.outputs['report'] = report.write(out / f'report_{stem}.html')
     log.info('Done in %.1f s -> %s', time.perf_counter() - t0, out)

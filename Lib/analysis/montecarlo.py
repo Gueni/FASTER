@@ -139,12 +139,12 @@ class MonteCarloSimulation:
         df.index = df.index + 1
         return df
 
-    def run(self) -> MCResult:
+    def run(self, progress=None) -> MCResult:
         samples = self.sample()
         jobs    = [SimJob('mc_nominal', values=self.nominals)]
         jobs += [SimJob(f'mc_{i:04d}', values=row.to_dict()) for i, row in samples.iterrows()]
         log.info('Monte Carlo: %d runs (%s)', self.runs, self.distribution)
-        raws = self.sim.run_batch(jobs)
+        raws = self.sim.run_batch(jobs, progress)
         if raws.get('mc_nominal') is None:
             raise RuntimeError('Monte Carlo nominal simulation failed')
 

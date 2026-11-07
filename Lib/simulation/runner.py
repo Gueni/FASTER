@@ -37,6 +37,8 @@ import itertools
 import logging
 import os
 import re
+import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Mapping, Union
@@ -44,6 +46,8 @@ from typing import Iterable, Mapping, Union
 from ..core.config import find_ltspice
 
 log = logging.getLogger(__name__)
+
+POLL_S = 0.05      # completion polling period of run_batch
 
 Value = Union[str, float, int]
 
@@ -126,14 +130,39 @@ class Simulator:
         if job.params:
             editor.set_parameters(**{k: format_value(v) for k, v in job.params.items()})
 
-    def run_batch(self, jobs: Iterable[SimJob]) -> dict[str, Path | None]:
-        """Run all jobs in parallel; return ``{job name: raw file or None}``."""
+    def _finished_count(self) -> int:
+        self.runner.update_completed()
+        return self.runner.okSim + self.runner.failSim
+
+    def run_batch(self, jobs: Iterable[SimJob],
+                  progress: Callable[[int, int], None] | None = None) -> dict[str, Path | None]:
+        """Run all jobs in parallel; return ``{job name: raw file or None}``.
+
+        ``progress(done, total)`` is called as simulations complete. Completion is
+        polled every 50 ms (SimRunner.wait_completion() polls only once per second).
+        """
+        jobs  = list(jobs)
+        total = len(jobs)
+        base  = self._finished_count()
+        last  = -1
+
+        def report() -> None:
+            nonlocal last
+            done = self._finished_count() - base
+            if progress is not None and done != last:
+                last = done
+                progress(done, total)
+
         tasks = {}
         for job in jobs:
             self._apply(job)
             # The netlist is written synchronously, so the editor can be reused.
             tasks[job.name] = self.runner.run(self.editor, run_filename=f'{job.name}.asc')
-        self.runner.wait_completion()
+            report()
+        while self.runner.active_tasks:
+            time.sleep(POLL_S)
+            report()
+        report()
         self.editor.reset_netlist()
 
         results: dict[str, Path | None] = {}
