@@ -86,6 +86,7 @@ progress bar and Stop, and every setting remembered between sessions.
 | Page | What you can do |
 |---|---|
 | **Circuit** | Open or drop a `.asc`. The schematic is drawn in the app (zoom, pan, hover read-out). Click a part to select it, double-click to edit its value. Edit values in the component table and SPICE directives in the list; the drawing updates instantly. Save, Save as, Revert, Open in LTspice. |
+| **Schematic** | Full schematic editor, LTspice compatible: draw wires, place any symbol of the LTspice library, net labels, ground, ports, comments and SPICE directives; move / drag (wires follow), rotate, mirror, copy / paste, undo / redo. Edit attributes and source functions (PULSE, SINE, PWL…), set the simulation command (.tran, .ac, .dc, .noise, .op, .tf), Run, then click wires and parts to plot voltages and currents. See [Schematic editor](#schematic-editor). |
 | **Analysis** | Choose the steps (nominal simulation, worst-case, Monte Carlo; FMEDA / ISO 26262 / FTA / report always). Mission profile (temperature, MIL-HDBK-217F environment, mission time), target ASIL, per-component diagnostic coverage / latent coverage / safe fraction, per-component tolerances for WCA and Monte Carlo (defaults from `tol=` in the schematic), output signals, run count, distribution, seed. Shows the number of LTspice simulations before you run. |
 | **Results** | KPI cards (verdict, SPFM, LFM, PMHF in green / red, system FIT, MTTF, worst case, Monte Carlo spread) and tabs with every result table (ISO 26262, λ per component, FMEDA, FTA, WCA, Monte Carlo, traces), the output files and `log.log`. Open the HTML report or the run folder. |
 | **Waveforms** | Fast native plots of every simulated voltage and current, Monte Carlo runs overlaid, crosshair read-out, any `.raw` file. |
@@ -100,10 +101,11 @@ touching the schematic file.
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl+1` … `Ctrl+7` | Switch page |
-| `Ctrl+O` / `Ctrl+S` | Open / save schematic |
-| `Ctrl+R` or `Ctrl+Enter` | Run the analysis |
-| `Esc` | Stop the analysis |
+| `Ctrl+1` … `Ctrl+8` | Switch page |
+| `Ctrl+N` / `Ctrl+O` / `Ctrl+S` | New / open / save schematic |
+| `Ctrl+R` or `Ctrl+Enter` | Run the analysis (on the Schematic page `Ctrl+R` rotates, like LTspice) |
+| `F11` | Simulate the schematic in the editor |
+| `Esc` | Stop the analysis / leave the current editor tool |
 | `Ctrl+J` / `Ctrl+L` | Show / hide console, clear console |
 | `Ctrl+T` / `Ctrl+B` | Toggle theme, collapse sidebar |
 
@@ -114,6 +116,32 @@ touching the schematic file.
 <p align="center">
   <img src="docs/img/analysis-light.png" width="70%" alt="Analysis page, light theme">
 </p>
+
+### Schematic editor
+
+The **Schematic** page replaces the LTspice schematic window with the FASTER UI.
+LTspice is still the simulation engine: on **Run** FASTER asks LTspice to
+netlist the schematic (`LTspice -netlist`) and simulates it in batch mode
+(`LTspice -b`), then reads the `.raw` file. Files stay plain `.asc`: every line
+FASTER does not edit is kept, so circuits open unchanged in LTspice.
+
+| Key | Action | Key | Action |
+|---|---|---|---|
+| `F2` | Component library | `F3` / `W` | Draw wire |
+| `F4` | Net label / port | `G` | Ground |
+| `R` `C` `L` `D` | Resistor, capacitor, inductor, diode | `T` / `S` | Comment / SPICE directive |
+| `Ctrl+R` / `Ctrl+E` | Rotate / mirror | `F5` / `Del` | Delete |
+| `F6` | Duplicate | `F7` / `F8` | Move (detach) / drag (wires follow) |
+| `Ctrl+Z` `F9` / `Ctrl+Y` `Shift+F9` | Undo / redo | `Ctrl+X` `Ctrl+C` `Ctrl+V` | Cut, copy, paste |
+| `P` | Probe | `Space` | Zoom to fit |
+| `F11` | Run | `Esc` / right-click | Stop the current tool |
+
+Mouse: wheel zooms, middle or right drag pans, drag on empty space selects
+(left-to-right: inside, right-to-left: touching), double-click edits.
+After a run the probe is active: click a wire for `V(net)`, a part for its
+current, or type any trace in the waveform pane. AC results show magnitude (dB)
+and phase, `.step` runs one curve per step, `.op` opens the operating-point
+table. The SPICE error log and the netlist are one click away.
 
 ## Command line
 
@@ -250,13 +278,15 @@ Lib/
   core/                 paths.py (install / data folders) · config.py (LTspice discovery, config) · cleanup.py · banner.py
   knowledge/            components.py (type detection) · failures.py · fit_rates.py
   schematic/            asc_parser.py · asc_writer.py (edit values / directives) · symbols.py (.asy library) · renderer.py (SVG export)
+                        model.py (editable schematic model, connectivity)
   simulation/           runner.py (LTspice runner, sweeps) · waveforms.py (.raw helpers, plots)
   analysis/             fmeda.py · iso26262.py · fta.py · wca.py · montecarlo.py
   reporting/            report.py (HTML report) · runlog.py (log.log with rich tables)
   gui/                  app.py · main_window.py · theme.py · icons.py · titlebar.py · widgets.py
                         session.py (open circuit, edits) · worker.py (analysis process)
                         schematic_view.py · settings.py · welcome.py (data folder dialog)
-    pages/              circuit · analysis · results · waveforms · library · history · settings
+    pages/              circuit · schematic · analysis · results · waveforms · library · history · settings
+    editor/             canvas.py (tools, selection, wiring) · graphics.py · dialogs.py · simulate.py · plot.py
   pipeline.py           full analysis flow
 tests/                  example circuit (Test.asc + simulation results)
 docs/img/               screenshots

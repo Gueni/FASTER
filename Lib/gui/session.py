@@ -60,6 +60,10 @@ class CircuitSession(QObject):
         self.doc: AscDocument | None = None
         self._saved_text = ''
         self._circuit: dict | None = None
+        self._last_text  = ''              # text before the next edit (undo snapshot)
+        self._undo: list[str] = []
+        self._redo: list[str] = []
+        self.draft = False                 # new, never saved schematic
 
     #? state                                                                            
     @property
@@ -89,6 +93,10 @@ class CircuitSession(QObject):
     def components(self) -> list[dict]:
         return self.circuit['components']
 
+    @property
+    def text(self) -> str:
+        return self.doc.text if self.doc else ''
+
     def rendering(self, colors: dict[str, str]) -> Rendering:
         return render(self.doc.path, self.doc.text, colors)
 
@@ -96,12 +104,31 @@ class CircuitSession(QObject):
     def open(self, path: str | Path) -> None:
         self.doc         = AscDocument.load(path)
         self._saved_text = self.doc.text
+        self._last_text  = self.doc.text
         self._circuit    = None
+        self._undo.clear()
+        self._redo.clear()
+        self.draft = False
         self.loaded.emit(str(self.doc.path))
         self.modified_changed.emit(False)
 
+    def new_draft(self, folder: Path) -> Path:
+        """Start an empty schematic (``Draft<n>.asc`` in ``folder``) that has to be saved under a name."""
+        folder.mkdir(parents=True, exist_ok=True)
+        n = 1
+        while (folder / f'Draft{n}.asc').exists():
+            n += 1
+        path = folder / f'Draft{n}.asc'
+        path.write_text('Version 4\nSHEET 1 880 680\n', encoding='utf-8')
+        self.open(path)
+        self.draft = True
+        return path
+
     def close(self) -> None:
         self.doc, self._circuit, self._saved_text = None, None, ''
+        self._undo.clear()
+        self._redo.clear()
+        self.draft = False
         self.closed.emit()
         self.modified_changed.emit(False)
 
@@ -110,6 +137,7 @@ class CircuitSession(QObject):
         if path is not None:
             self.doc.path = Path(target)
         self._saved_text = self.doc.text
+        self.draft       = False
         self.modified_changed.emit(False)
         if path is not None:
             self.loaded.emit(str(self.doc.path))
@@ -119,12 +147,52 @@ class CircuitSession(QObject):
         if self.doc is not None:
             self.open(self.doc.path)
 
-    def _edited(self) -> None:
-        self._circuit = None
+    def _edited(self, record: bool = True) -> None:
+        if record and self.doc.text != self._last_text:
+            self._undo.append(self._last_text)
+            del self._undo[:-200]
+            self._redo.clear()
+        self._last_text = self.doc.text
+        self._circuit   = None
         self.changed.emit()
         self.modified_changed.emit(self.modified)
 
+    #? undo / redo                                                                      
+    @property
+    def can_undo(self) -> bool:
+        return bool(self._undo)
+
+    @property
+    def can_redo(self) -> bool:
+        return bool(self._redo)
+
+    def _restore(self, text: str) -> None:
+        self.doc.lines = text.split('\n')
+        self._edited(record=False)
+
+    def undo(self) -> bool:
+        if not self._undo:
+            return False
+        self._redo.append(self.doc.text)
+        self._restore(self._undo.pop())
+        return True
+
+    def redo(self) -> bool:
+        if not self._redo:
+            return False
+        self._undo.append(self.doc.text)
+        self._restore(self._redo.pop())
+        return True
+
     #? edits                                                                            
+    def set_text(self, text: str) -> None:
+        """Replace the whole schematic (used by the editor); one undo step."""
+        text = text.replace('\r\n', '\n').rstrip('\n') + '\n'      # LTspice files end with a newline
+        if self.doc is None or text == self.doc.text:
+            return
+        self.doc.lines = text.split('\n')
+        self._edited()
+
     def set_value(self, name: str, value: str) -> bool:
         ok = self.doc.set_value(name, value.strip())
         if ok:

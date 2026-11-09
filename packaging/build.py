@@ -23,6 +23,7 @@
     python packaging/build.py              # icon, exe folder, smoke test, installer
     python packaging/build.py --no-installer
     python packaging/build.py --no-test
+    python packaging/build.py --stage C:\Temp\faster-build   # build outside the source tree, then copy to dist/
 
 Results::
 
@@ -128,7 +129,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description='Build the FASTER executables and installer')
     ap.add_argument('--no-installer', action='store_true', help='only build dist/FASTER')
     ap.add_argument('--no-test', action='store_true', help='skip the smoke test of the frozen app')
+    ap.add_argument('--stage', type=Path, default=None,
+                    help='build in this folder (outside the source tree, e.g. when a file watcher or '
+                         'antivirus locks files under dist/ or build/), then copy the results to dist/')
     args = ap.parse_args()
+    global APP_DIR
+    stage    = args.stage.resolve() if args.stage else None
+    dist     = stage / 'dist' if stage else DIST
+    workpath = stage / 'pyinstaller' if stage else BUILD / 'pyinstaller'
+    APP_DIR  = dist / 'FASTER'
     ver  = version()
     t0   = time.monotonic()
     BUILD.mkdir(exist_ok=True)
@@ -139,7 +148,7 @@ def main() -> int:
 
     step('PyInstaller')
     run([sys.executable, '-m', 'PyInstaller', PACKAGING / 'faster.spec', '--noconfirm', '--clean',
-         '--distpath', DIST, '--workpath', BUILD / 'pyinstaller'], cwd=ROOT)
+         '--distpath', dist, '--workpath', workpath], cwd=ROOT)
 
     if not args.no_test:
         step('Smoke test')
@@ -152,9 +161,21 @@ def main() -> int:
             print('  Inno Setup 6 not found - install it from https://jrsoftware.org/isdl.php '
                   'or set ISCC; skipping the installer.')
         else:
-            run([iscc, '/Q', f'/DAppVersion={ver}', PACKAGING / 'installer.iss'])
-            for exe in (DIST / 'installer').glob(f'FASTER-{ver}-setup.exe'):
+            run([iscc, '/Q', f'/DAppVersion={ver}', f'/DSrcDir={APP_DIR}', f'/O{dist / "installer"}',
+                 PACKAGING / 'installer.iss'])
+            for exe in (dist / 'installer').glob(f'FASTER-{ver}-setup.exe'):
                 print(f'  installer: {exe} ({exe.stat().st_size / 1e6:.1f} MB)')
+
+    if stage:
+        step(f'Copy results from {stage} to {DIST}')
+        shutil.rmtree(DIST / 'FASTER', ignore_errors=True)
+        shutil.copytree(APP_DIR, DIST / 'FASTER')
+        if (dist / 'installer').is_dir():
+            (DIST / 'installer').mkdir(parents=True, exist_ok=True)
+            for exe in (dist / 'installer').glob('*.exe'):
+                shutil.copy2(exe, DIST / 'installer' / exe.name)
+                print(f'  {DIST / "installer" / exe.name}')
+        APP_DIR = DIST / 'FASTER'
 
     size = sum(f.stat().st_size for f in APP_DIR.rglob('*') if f.is_file()) / 1e6
     print(f'\nDone in {time.monotonic() - t0:.0f} s - {APP_DIR} ({size:.0f} MB)')

@@ -31,6 +31,7 @@ Package layout (one sub-package per functional area, one module per feature):
     schematic/     asc_parser.py  LTspice .asc parser
                    symbols.py     LTspice .asy symbol library loader
                    renderer.py    schematic -> SVG image export
+                   model.py       editable schematic model and connectivity (schematic editor)
     simulation/    runner.py      LTspice runner: single run, value / param / model sweeps
                    waveforms.py   .raw reading, trace alignment, plots
     analysis/      fmeda.py       Failure Modes, Effects and Diagnostic Analysis
@@ -43,6 +44,6 @@ Package layout (one sub-package per functional area, one module per feature):
     pipeline.py    full analysis flow
 """
 
-__version__ = '3.0.0'
+__version__ = '3.1.0'
 
 #? -------------------------------------------------------------------------------

@@ -21,13 +21,15 @@
 ; deletes the data folder.
 
 #ifndef AppVersion
-  #define AppVersion "3.0.0"
+  #define AppVersion "3.1.0"
 #endif
 #define AppName      "FASTER"
 #define AppLongName  "FASTER - Failure Analysis, Simulation, Testing and Evaluation Report"
 #define AppPublisher "Mohamed Gueni"
 #define AppExe       "FASTER.exe"
-#define SrcDir       "..\dist\FASTER"
+#ifndef SrcDir
+  #define SrcDir     "..\dist\FASTER"
+#endif
 
 [Setup]
 AppId={{8B3139E9-754D-4C0E-B3CC-C44D04E530C7}

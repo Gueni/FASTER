@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (QApplication, QButtonGroup, QFileDialog, QFrame, 
 
 from .. import __version__
 from ..core.config import find_ltspice
-from ..core.paths import data_dir, examples_dir, results_dir
+from ..core.paths import data_dir, examples_dir, results_dir, work_dir
 from . import settings
 from .icons import app_icon
 from .pages.analysis_page import AnalysisPage
@@ -43,6 +43,7 @@ from .pages.circuit_page import CircuitPage
 from .pages.history_page import HistoryPage
 from .pages.library_page import LibraryPage
 from .pages.results_page import ResultsPage, open_path
+from .pages.schematic_page import SchematicPage
 from .pages.settings_page import SettingsPage
 from .pages.waveforms_page import WaveformsPage
 from .session import CircuitSession
@@ -85,13 +86,14 @@ class MainWindow(QMainWindow):
         self._root = root
 
         self.circuit_page   = CircuitPage(self)
+        self.schematic_page = SchematicPage(self)
         self.analysis_page  = AnalysisPage(self)
         self.results_page   = ResultsPage(self)
         self.waveforms_page = WaveformsPage(self)
         self.library_page   = LibraryPage(self)
         self.history_page   = HistoryPage(self)
         self.settings_page  = SettingsPage(self)
-        self.pages = [self.circuit_page, self.analysis_page, self.results_page, self.waveforms_page,
+        self.pages = [self.circuit_page, self.schematic_page, self.analysis_page, self.results_page, self.waveforms_page,
                       self.library_page, self.history_page, self.settings_page]
 
         h.addWidget(self._build_sidebar())
@@ -254,13 +256,32 @@ class MainWindow(QMainWindow):
             QShortcut(QKeySequence(f'Ctrl+{i + 1}'), self, lambda idx=i: self.select_page(idx))
         QShortcut(QKeySequence('Ctrl+O'), self, self.open_dialog)
         QShortcut(QKeySequence('Ctrl+S'), self, self.save)
-        QShortcut(QKeySequence('Ctrl+R'), self, self.run_analysis)
+        QShortcut(QKeySequence('Ctrl+R'), self, self._ctrl_r)
         QShortcut(QKeySequence('Ctrl+Return'), self, self.run_analysis)
-        QShortcut(QKeySequence('Escape'), self, self.worker.stop)
+        QShortcut(QKeySequence('Escape'), self, self._escape)
+        QShortcut(QKeySequence('F11'), self, self.schematic_page.run_sim)
+        QShortcut(QKeySequence('Ctrl+N'), self, self.new_schematic)
         QShortcut(QKeySequence('Ctrl+L'), self, lambda: self.console.clear())
         QShortcut(QKeySequence('Ctrl+J'), self, lambda: self.console_btn.click())
         QShortcut(QKeySequence('Ctrl+T'), self, self._toggle_theme)
         QShortcut(QKeySequence('Ctrl+B'), self, self.toggle_sidebar)
+
+    def _on_schematic(self) -> bool:
+        return self.stack.currentWidget() is self.schematic_page
+
+    def _ctrl_r(self) -> None:
+        # Ctrl+R rotates in the schematic editor (LTspice), runs the analysis elsewhere
+        if self._on_schematic():
+            self.schematic_page.canvas.rotate_selection()
+        else:
+            self.run_analysis()
+
+    def _escape(self) -> None:
+        if self._on_schematic() and self.schematic_page.handle_escape():
+            return
+        if self.schematic_page.runner.busy:
+            self.schematic_page.runner.stop()
+        self.worker.stop()
 
     #? context API used by the pages                                                          
     def toast(self, text: str, kind: str = 'info', ms: int = 3500) -> None:
@@ -341,9 +362,20 @@ class MainWindow(QMainWindow):
         n = len(self.session.components())
         self.log(f'Opened {path}  ({n} components)', 'muted')
         self.toast(f'{path.name} loaded · {n} components', 'success', 2200)
-        self.show_page('Circuit')
+        if not self._on_schematic():
+            self.show_page('Circuit')
+
+    def new_schematic(self) -> None:
+        if not self._discard_ok():
+            return
+        path = self.session.new_draft(work_dir())
+        self.log(f'New schematic {path.name} (save it to choose its name and folder)', 'muted')
+        self.show_page('Schematic')
 
     def save(self) -> None:
+        if self.session.is_open and self.session.draft:
+            self.save_as()
+            return
         if self.session.is_open and self.session.modified:
             target = self.session.save()
             self.toast(f'Saved {target.name}', 'success', 2000)
@@ -352,7 +384,8 @@ class MainWindow(QMainWindow):
     def save_as(self) -> None:
         if not self.session.is_open:
             return
-        path, _ = QFileDialog.getSaveFileName(self, 'Save schematic as', str(self.session.path),
+        start = str(Path(settings.get('files/last', '') or examples_dir()).parent / self.session.path.name)             if self.session.draft else str(self.session.path)
+        path, _ = QFileDialog.getSaveFileName(self, 'Save schematic as', start,
                                               'LTspice schematic (*.asc)')
         if path:
             target = self.session.save(path)

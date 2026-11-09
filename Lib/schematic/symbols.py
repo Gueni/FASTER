@@ -56,6 +56,15 @@ class Symbol:
     windows : dict[int, tuple[int, int, str, int]] = field(default_factory=dict)   # attr -> x, y, align, size
     attrs   : dict[str, str] = field(default_factory=dict)
     found   : bool = True
+    pin_names : list[str] = field(default_factory=list)       # parallel to ``pins``
+    pin_order : list[int] = field(default_factory=list)       # SpiceOrder, parallel to ``pins``
+    kind      : str = 'CELL'                                   # SymbolType: CELL or BLOCK
+    path      : Path | None = None
+
+    def spice_pins(self) -> list[int]:
+        """Indices into ``pins`` in netlist (SpiceOrder) order."""
+        order = [(o if o > 0 else 10_000 + i, i) for i, o in enumerate(self.pin_order)]
+        return [i for _, i in sorted(order)]
 
 
 #? -------------------------------------------------------------------------------
@@ -92,7 +101,7 @@ def parse_text(rest: str) -> tuple[int, int, str, int, str] | None:
 
 #? -------------------------------------------------------------------------------
 def load_symbol_file(path: Path, name: str) -> Symbol:
-    sym = Symbol(name)
+    sym = Symbol(name, path=path)
     try:
         lines = _read_lines(path)
     except OSError:
@@ -106,6 +115,19 @@ def load_symbol_file(path: Path, name: str) -> Symbol:
             parse_shape_line(keyword, parts, sym)
         elif keyword == 'PIN' and len(parts) >= 2:
             sym.pins.append((int(parts[0]), int(parts[1])))
+            sym.pin_names.append(str(len(sym.pins)))
+            sym.pin_order.append(0)
+        elif keyword == 'PINATTR' and sym.pins:
+            attr, _, value = rest.partition(' ')
+            if attr == 'PinName':
+                sym.pin_names[-1] = value.strip()
+            elif attr == 'SpiceOrder':
+                try:
+                    sym.pin_order[-1] = int(value)
+                except ValueError:
+                    pass
+        elif keyword == 'SymbolType':
+            sym.kind = rest.strip().upper() or 'CELL'
         elif keyword == 'WINDOW' and len(parts) >= 5:
             sym.windows[int(parts[0])] = (int(parts[1]), int(parts[2]), parts[3], int(parts[4]))
         elif keyword == 'SYMATTR':
@@ -139,8 +161,27 @@ def _library_index() -> dict[str, Path]:
 
 #? -------------------------------------------------------------------------------
 @lru_cache(maxsize=None)
+def library_symbols() -> list[tuple[str, Path]]:
+    """``[('Misc\\cell', path), ('res', path), ...]``: every installed symbol, once, sorted."""
+    out: dict[str, Path] = {}
+    for lib in SYMBOL_LIBRARIES:
+        root = Path(os.path.expanduser(os.path.expandvars(lib)))
+        if not root.is_dir():
+            continue
+        for dirpath, _, files in os.walk(root):
+            for fn in files:
+                if fn.lower().endswith('.asy'):
+                    p   = Path(dirpath) / fn
+                    rel = p.relative_to(root).with_suffix('').as_posix().replace('/', '\\')
+                    out.setdefault(rel, p)
+    return sorted(out.items(), key=lambda kv: kv[0].lower())
+
+
+#? -------------------------------------------------------------------------------
+@lru_cache(maxsize=None)
 def find_symbol(name: str, schematic_dir: str = '') -> Symbol:
-    key = name.replace('/', '\\').lower()
+    name = name.replace('/', '\\').replace('\\\\', '\\')          # .asc files write "OpAmps\\LT1001"
+    key  = name.lower()
     if schematic_dir:
         local = Path(schematic_dir) / (name.replace('\\', os.sep) + '.asy')
         if local.is_file():
