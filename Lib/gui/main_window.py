@@ -244,6 +244,7 @@ class MainWindow(QMainWindow):
         w.progress.connect(self._job_progress)
         w.finished.connect(self._job_finished)
         w.busy_changed.connect(self._busy_changed)
+        self.schematic_page.sim_busy_changed.connect(self._sync_run)
         self.session.loaded.connect(lambda *_: self._sync_circuit())
         self.session.closed.connect(self._sync_circuit)
         self.session.modified_changed.connect(lambda *_: self._sync_circuit())
@@ -419,12 +420,27 @@ class MainWindow(QMainWindow):
             self.status_right.setText('')
         self.circuit_chip.setProperty('modified', bool(s.modified))
         repolish(self.circuit_chip)
-        self.run_btn.setEnabled(s.is_open and not self.worker.busy)
+        self._sync_run()
+
+    def _sync_run(self, *_) -> None:
+        """Only one run at a time: the analysis (top bar) or the editor simulation (Schematic page)."""
+        simulating = self.schematic_page.runner.busy
+        self.run_btn.setEnabled(self.session.is_open and not self.worker.busy and not simulating)
+        self.run_btn.setToolTip('A simulation is running in the schematic editor - wait for it or stop it first'
+                                if simulating else 'Run the analysis (Ctrl+R)')
+        if not self.worker.busy:
+            if simulating:
+                self.state_pill.set_state('Simulating…', 'busy')
+            elif self.state_pill.text() == 'Simulating…':
+                self.state_pill.set_state('Idle', 'idle')
 
     #? analysis                                                                                   
     def run_analysis(self) -> None:
         if self.worker.busy:
             self.toast('An analysis is already running.', 'warning')
+            return
+        if self.schematic_page.runner.busy:
+            self.toast('A simulation is running in the schematic editor - wait for it or stop it first.', 'warning')
             return
         if not self.session.is_open:
             self.toast('Open a schematic first.', 'info')
@@ -503,7 +519,7 @@ class MainWindow(QMainWindow):
         self.stop_btn.setEnabled(busy)
         for p in self.pages:
             p.set_busy(busy)
-        self.run_btn.setEnabled(not busy and self.session.is_open)
+        self._sync_run()
         if busy:
             self.state_pill.set_state('Working…', 'busy')
             self.progress.setValue(0)

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QMenu, QPlainTextEdit, QSplitter, QVBoxLayout, QWidget
 
 from ...core.config import find_ltspice
@@ -48,6 +48,7 @@ class SchematicPage(BasePage):
     title     = 'Schematic'
     subtitle  = 'Draw, edit and simulate circuits (LTspice compatible)'
     icon_name = 'wire'
+    sim_busy_changed = Signal(bool)      # an LTspice run of the editor started / ended
 
     def __init__(self, ctx, parent=None) -> None:
         super().__init__(ctx, parent)
@@ -241,7 +242,11 @@ class SchematicPage(BasePage):
         self.undo_btn.setEnabled(s.is_open and s.can_undo)
         self.redo_btn.setEnabled(s.is_open and s.can_redo)
         self.save_btn.setEnabled(s.is_open and (s.modified or s.draft))
-        self.run_btn.setEnabled(s.is_open and not self.runner.busy)
+        # one run at a time: the editor simulation and the analysis share LTspice and the working copy
+        analysing = self.ctx.worker.busy
+        self.run_btn.setEnabled(s.is_open and not self.runner.busy and not analysing)
+        self.run_btn.setToolTip('An analysis is running - wait for it or stop it first' if analysing
+                                else 'Simulate with LTspice (F11)')
         self.stop_btn.setEnabled(self.runner.busy)
 
     def undo(self) -> None:
@@ -406,6 +411,9 @@ class SchematicPage(BasePage):
     def run_sim(self) -> None:
         if not self.session.is_open or self.runner.busy:
             return
+        if self.ctx.worker.busy:
+            self.ctx.toast('An analysis is running - wait for it or stop it first.', 'warning')
+            return
         exe = find_ltspice(settings.get('run/ltspice', '') or None)
         if exe is None:
             self.ctx.toast('LTspice not found - set its path in Settings.', 'warning')
@@ -417,9 +425,11 @@ class SchematicPage(BasePage):
         self.ctx.log(f'Simulating {asc.name} with LTspice…', 'info')
         self.runner.start(exe, Path(asc))
         self._sync()
+        self.sim_busy_changed.emit(self.runner.busy)
 
     def _sim_finished(self, res: SimResult) -> None:
         self._sync()
+        self.sim_busy_changed.emit(False)
         self.result = res if res.raw else self.result
         self._stale = False
         if not res.ok:
