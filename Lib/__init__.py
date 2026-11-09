@@ -44,6 +44,6 @@ Package layout (one sub-package per functional area, one module per feature):
     pipeline.py    full analysis flow
 """
 
-__version__ = '3.1.0'
+__version__ = '3.1.1'
 
 #? -------------------------------------------------------------------------------

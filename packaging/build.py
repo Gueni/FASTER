@@ -169,7 +169,7 @@ def main() -> int:
     if stage:
         step(f'Copy results from {stage} to {DIST}')
         shutil.rmtree(DIST / 'FASTER', ignore_errors=True)
-        shutil.copytree(APP_DIR, DIST / 'FASTER')
+        shutil.copytree(APP_DIR, DIST / 'FASTER', dirs_exist_ok=True)      # leftovers may be locked
         if (dist / 'installer').is_dir():
             (DIST / 'installer').mkdir(parents=True, exist_ok=True)
             for exe in (dist / 'installer').glob('*.exe'):

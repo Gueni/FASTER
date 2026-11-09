@@ -21,7 +21,7 @@
 ; deletes the data folder.
 
 #ifndef AppVersion
-  #define AppVersion "3.1.0"
+  #define AppVersion "3.1.1"
 #endif
 #define AppName      "FASTER"
 #define AppLongName  "FASTER - Failure Analysis, Simulation, Testing and Evaluation Report"
